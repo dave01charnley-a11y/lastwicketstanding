@@ -80,7 +80,11 @@
   .team-chip.selected{border-color:var(--floodlight);background:var(--pitch-900);}
   .team-chip.used{opacity:.35;cursor:not-allowed;pointer-events:none;filter:grayscale(1);}
   .team-name{font-family:'Inter Tight',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.02em;}
-  .fixture-row{display:flex;align-items:center;gap:10px;font-family:'Inter Tight',sans-serif;font-size:13px;margin-bottom:6px;}
+  .fixture-row{display:grid;grid-template-columns:38px 122px 22px 38px 1fr;align-items:center;column-gap:12px;font-family:'Inter Tight',sans-serif;font-size:13px;padding:10px 0;border-bottom:1px solid rgba(74,58,47,0.35);}
+  .fixture-row:last-child{border-bottom:none;}
+  .fixture-row .badge-box{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;flex-shrink:0;}
+  .fixture-row .badge-box img{max-width:80%;max-height:80%;object-fit:contain;display:block;}
+  .fixture-row .vs{text-align:center;color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
   .result-strip{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(90deg, rgba(255,215,0,0.10), transparent);border:1px solid var(--floodlight-dim);border-radius:8px;padding:16px 20px;margin-top:8px;}
   .result-label{font-family:'Inter Tight',sans-serif;text-transform:uppercase;font-size:13px;color:var(--chalk-dim);letter-spacing:.03em;}
   .result-points{font-family:'Inter Tight',monospace;font-size:22px;font-weight:700;color:var(--floodlight);letter-spacing:.04em;}
@@ -267,7 +271,7 @@ function currentOpenRound(league){
 /* ---------- Rendering ---------- */
 function setTab(tab){ state.tab = tab; render(); }
 function renderNav(){
-  const tabs = [['home','Home'],['fixtures','Fixtures'],['rules','How It Works'],['contact','Contact'],['siteadmin','Site Admin']];
+  const tabs = [['home','Home'],['myleague','My League'],['fixtures','Fixtures'],['rules','How It Works'],['contact','Contact'],['siteadmin','Site Admin']];
   let html = '<nav class="main-nav">';
   tabs.forEach(([key,label])=>{
     html += '<button class="'+(state.tab===key?'active':'')+'" onclick="setTab(\''+key+'\')">'+label+'</button>';
@@ -292,6 +296,13 @@ async function render(){
     body = renderContactTab();
   } else if(state.tab==='siteadmin'){
     body = await renderSiteAdminTab();
+  } else if(state.tab==='myleague'){
+    if(!state.code){ body = '<div class="card"><h3>My League</h3><p class="note" style="margin-top:0;">Join or create a league on the Home tab first — this shows your six teams and your pick status once you\'re in one.</p></div>'; }
+    else {
+      if(!state.league){ state.league = await loadLeague(state.code); }
+      if(!state.league){ body = '<div class="card"><h3>My League</h3><p class="note" style="margin-top:0;">Couldn\'t find that league. Head to Home and rejoin.</p></div>'; }
+      else body = renderMyLeagueTab();
+    }
   } else {
     if(!state.code){ body = renderJoin(); }
     else {
@@ -303,6 +314,62 @@ async function render(){
     }
   }
   el.innerHTML = '<div>' + header + body + renderFooterLinks() + '</div>';
+}
+function nextFixtureForTeam(teamId, fromRound){
+  const start = Math.max(1, fromRound||1);
+  for(let r=start; r<=10; r++){
+    const fx = fixturesForRound(r);
+    const match = fx.find(([a,b])=>a===teamId||b===teamId);
+    if(match){
+      const opp = match[0]===teamId ? match[1] : match[0];
+      return 'Round '+r+' v '+team(opp).name;
+    }
+  }
+  return 'No more league-stage fixtures scheduled (playoffs depend on final standings)';
+}
+function renderMyLeagueTab(){
+  const league = state.league;
+  const standings = computePlayerStandings(league);
+  const me = state.identity ? standings.find(s=>s.id===state.identity.id) : null;
+  const round = currentOpenRound(league);
+  const usedCounts = me ? me.usedCounts : {0:0,1:0,2:0,3:0,4:0,5:0};
+
+  let html = '<div class="card"><h3>'+esc(league.name)+' \u2014 My League</h3>';
+  if(!me){
+    html += '<p class="note" style="margin-top:0;">You haven\'t joined this league as a player yet \u2014 join on the Home tab to track your own picks here. Showing the season schedule below either way.</p>';
+  }
+
+  html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--chalk-dim);margin:14px 0 8px;">Season Progress</p>';
+  html += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px;">';
+  for(let r=1;r<=10;r++){
+    const phase = r<round ? 'done' : r===round ? 'current' : 'upcoming';
+    const bg = phase==='current' ? 'var(--floodlight)' : phase==='done' ? 'var(--pitch-800)' : 'var(--pitch-950)';
+    const color = phase==='current' ? 'var(--pitch-950)' : 'var(--chalk-dim)';
+    const border = phase==='upcoming' ? '1px dashed var(--pitch-line)' : '1px solid var(--pitch-line)';
+    html += '<div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:\'Inter Tight\',monospace;font-size:12px;font-weight:700;background:'+bg+';color:'+color+';border:'+border+';">'+r+'</div>';
+    if(r===6){
+      html += '<div style="display:flex;flex-direction:column;align-items:center;padding:0 6px;"><span style="color:var(--floodlight);font-size:9px;text-transform:uppercase;letter-spacing:.05em;">\u21bb Reset</span></div>';
+    }
+  }
+  html += '</div>';
+  html += '<p class="note" style="margin-top:6px;">Rounds 1\u20136: every team must be picked once. From Round 7, you can repeat a team you\u2019ve already used \u2014 that\u2019s the reset.</p>';
+
+  html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--chalk-dim);margin:20px 0 10px;">Your Six Teams</p>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;">';
+  TEAMS.forEach(t=>{
+    const used = usedCounts[t.id]||0;
+    const nextFx = nextFixtureForTeam(t.id, round);
+    const exhausted = used>=2;
+    html += '<div title="Next fixture: '+esc(nextFx)+'" style="background:var(--pitch-950);border:1px solid '+(exhausted?'var(--pitch-line)':'var(--floodlight-dim)')+';border-radius:8px;padding:12px 8px;text-align:center;'+(exhausted?'opacity:.45;':'')+'">'
+      + '<div style="display:flex;justify-content:center;margin-bottom:8px;">'+kitSVG(t.id)+'</div>'
+      + '<div class="team-name" style="font-size:12px;margin-bottom:4px;">'+esc(t.short)+'</div>'
+      + '<div style="font-family:\'Inter Tight\',monospace;font-size:11px;color:'+(exhausted?'var(--danger)':'var(--floodlight)')+';">'+used+'/2 used</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  html += '<p class="note" style="margin-top:14px;">Hover over a team to see its next scheduled fixture.</p>';
+  html += '</div>';
+  return html;
 }
 function renderContactTab(){
   return '<div class="card"><h3>Contact</h3>'
@@ -394,7 +461,13 @@ function renderRulesTab(){
     + '</div>';
 }
 function fixtureRowHTML(a,b){
-  return '<div class="fixture-row">'+kitSVG(a)+'<span class="team-name">'+esc(team(a).short)+'</span><span style="color:var(--chalk-dim);font-size:11px;">v</span>'+kitSVG(b)+'<span class="team-name">'+esc(team(b).short)+'</span></div>';
+  return '<div class="fixture-row">'
+    + '<div class="badge-box">'+kitSVG(a)+'</div>'
+    + '<span class="team-name">'+esc(team(a).short)+'</span>'
+    + '<span class="vs">v</span>'
+    + '<div class="badge-box">'+kitSVG(b)+'</div>'
+    + '<span class="team-name">'+esc(team(b).short)+'</span>'
+    + '</div>';
 }
 function renderFixturesTab(){
   const roundDates = ['2 Dec 2025','4 Dec 2025','7 Dec 2025','9 Dec 2025','12 Dec 2025','14 Dec 2025','17 Dec 2025','20 Dec 2025','21 Dec 2025','26 Dec 2025'];
