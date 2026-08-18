@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Last Wicket Standing — Anticiplay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --pitch-950:#0A0A0A;
+    --pitch-900:#121212;
+    --pitch-800:#241C14;
+    --pitch-line:#4A3A2F;
+    --chalk:#FFFFFF;
+    --chalk-dim:#C4B7AE;
+    --floodlight:#FFD700;
+    --floodlight-dim:#B8960A;
+    --brass:#22C55E;
+    --danger:#E0796B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(255,215,0,0.08), transparent 60%),
+      linear-gradient(180deg, var(--pitch-950), var(--pitch-900) 40%, var(--pitch-950));
+    color:var(--chalk);
+    font-family:'Inter Tight', Georgia, serif;
+    font-weight:700;
+    min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 80px;}
+  h1{
+    font-family:'Inter Tight',sans-serif;font-weight:700;font-size:clamp(28px,6vw,40px);
+    letter-spacing:-0.01em;margin:8px 0 6px;text-transform:uppercase;
+  }
+  .sub{color:var(--chalk-dim);font-size:14px;max-width:560px;line-height:1.5;margin-bottom:22px;}
+  .powered{font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border:1px solid var(--pitch-line);border-radius:10px;padding:22px 24px;margin-bottom:18px;
+  }
+  .card h3{font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.03em;font-size:15px;color:var(--floodlight);margin:0 0 14px;}
+  .note{color:var(--chalk-dim);font-size:13px;line-height:1.6;margin-top:6px;}
+  table{width:100%;border-collapse:collapse;font-family:'Inter Tight',monospace;font-size:13px;}
+  th{text-align:left;color:var(--chalk-dim);font-weight:700;padding:8px 6px;border-bottom:1px solid var(--pitch-line);text-transform:uppercase;font-size:11px;letter-spacing:.05em;}
+  td{padding:9px 6px;border-bottom:1px solid rgba(74,58,47,0.4);}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-family:'Inter Tight',monospace;font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.04em;}
+  .field input, .field select{
+    background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;
+    color:var(--chalk);padding:10px 12px;font-family:'Inter Tight',serif;font-size:14px;width:100%;
+  }
+  .field input:focus, .field select:focus{outline:1px solid var(--floodlight);}
+  .btn-primary{
+    font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-weight:700;font-size:14px;
+    background:var(--floodlight);color:var(--pitch-950);border:none;border-radius:6px;
+    padding:13px 22px;cursor:pointer;grid-column:1/-1;margin-top:4px;width:100%;
+  }
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-secondary{
+    font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-weight:700;font-size:12px;
+    background:none;color:var(--floodlight);border:1px solid var(--floodlight-dim);border-radius:6px;
+    padding:8px 14px;cursor:pointer;
+  }
+  .status{display:inline-block;font-family:'Inter Tight',monospace;font-size:11px;text-transform:uppercase;padding:3px 9px;border-radius:4px;letter-spacing:.03em;}
+  .status.alive{background:rgba(255,215,0,0.22);color:var(--chalk);}
+  .status.out{background:rgba(224,121,107,0.2);color:var(--danger);}
+  .lms-status-strip{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:18px;padding:14px 18px;background:var(--pitch-800);border-radius:10px;border:1px solid var(--pitch-line);}
+  .lms-status-item{display:flex;flex-direction:column;gap:2px;}
+  .lms-status-item .num{font-family:'Inter Tight',serif;font-size:22px;font-weight:700;color:var(--floodlight);}
+  .lms-status-item .lbl{font-family:'Inter Tight',sans-serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--chalk-dim);}
+  .team-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:2px solid var(--pitch-line);background:var(--pitch-800);cursor:pointer;}
+  .team-chip .crest{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;}
+  .team-chip.selected{border-color:var(--floodlight);background:var(--pitch-900);}
+  .team-chip.used{opacity:.35;cursor:not-allowed;pointer-events:none;filter:grayscale(1);}
+  .team-name{font-family:'Inter Tight',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.02em;}
+  .fixture-row{display:flex;align-items:center;gap:10px;font-family:'Inter Tight',sans-serif;font-size:13px;margin-bottom:6px;}
+  .result-strip{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(90deg, rgba(255,215,0,0.10), transparent);border:1px solid var(--floodlight-dim);border-radius:8px;padding:16px 20px;margin-top:8px;}
+  .result-label{font-family:'Inter Tight',sans-serif;text-transform:uppercase;font-size:13px;color:var(--chalk-dim);letter-spacing:.03em;}
+  .result-points{font-family:'Inter Tight',monospace;font-size:22px;font-weight:700;color:var(--floodlight);letter-spacing:.04em;}
+  .code-pill{font-family:'Inter Tight',monospace;background:var(--pitch-950);border:1px solid var(--floodlight-dim);color:var(--floodlight);padding:3px 10px;border-radius:6px;font-size:13px;letter-spacing:.05em;}
+  .link{color:var(--floodlight);text-decoration:none;}
+  .link:hover{text-decoration:underline;}
+  .win-btn{font-family:'Inter Tight',monospace;font-size:12px;font-weight:700;padding:8px 12px;border-radius:6px;cursor:pointer;border:1px solid var(--pitch-line);background:var(--pitch-950);color:var(--chalk-dim);}
+  .win-btn.active{background:rgba(255,215,0,0.22);color:var(--chalk);border-color:var(--floodlight);}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ---------- Supabase client (same project as Anticiplay, new table) ---------- */
+const SUPABASE_URL = 'https://plpevtpsjmmbobdxotmr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable__8Eb_FMqLioU0gBn38AkXQ_b6F_zO2r';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const TABLE = 'lws_leagues';
+
+/* ---------- Teams (ILT20) ---------- */
+const TEAMS = [
+  {id:0, name:'Abu Dhabi Knight Riders', short:'ADKR', color:'#5B2A86'},
+  {id:1, name:'Desert Vipers', short:'Vipers', color:'#7A1F2B'},
+  {id:2, name:'Dubai Capitals', short:'Capitals', color:'#D6274B'},
+  {id:3, name:'Gulf Giants', short:'Giants', color:'#F4791F'},
+  {id:4, name:'MI Emirates', short:'MIE', color:'#1B3F8B'},
+  {id:5, name:'Sharjah Warriorz', short:'Warriorz', color:'#8B6F1F'}
+];
+const BASE_ROUNDS = [
+  [[0,5],[1,4],[2,3]],
+  [[0,4],[5,3],[1,2]],
+  [[0,3],[4,2],[5,1]],
+  [[0,2],[3,1],[4,5]],
+  [[0,1],[2,5],[3,4]]
+];
+function fixturesForRound(r){ return BASE_ROUNDS[(r-1)%5]; }
+function team(id){ return TEAMS[id]; }
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function crestHTML(id){
+  const t = team(id);
+  return '<span class="crest" style="background:'+t.color+';">'+esc(t.short.slice(0,3).toUpperCase())+'</span>';
+}
+
+/* ---------- App state ---------- */
+const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null };
+const params = new URLSearchParams(window.location.search);
+if(params.get('code')) state.code = params.get('code').toUpperCase();
+
+/* ---------- Data access ---------- */
+async function loadLeague(code){
+  const { data, error } = await sb.from(TABLE).select('*').eq('code', code).maybeSingle();
+  if(error || !data) return null;
+  return data.data;
+}
+async function saveLeague(league){
+  await sb.from(TABLE).upsert({ code: league.code, data: league, updated_at: new Date().toISOString() });
+}
+function genCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for(let i=0;i<5;i++) c += chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+
+/* ---------- Game logic ---------- */
+function computeStandings(league){
+  const wins = {0:0,1:0,2:0,3:0,4:0,5:0};
+  for(let r=1;r<=10;r++){
+    const w = league.matchWinners && league.matchWinners[r];
+    if(w) w.forEach(id=>{ if(id!==null) wins[id]++; });
+  }
+  return [0,1,2,3,4,5].slice().sort((a,b)=> wins[b]-wins[a] || a-b);
+}
+function leagueRoundComplete(league, r){
+  const w = league.matchWinners && league.matchWinners[r];
+  return !!(w && w.every(x=>x!==null && x!==undefined));
+}
+function playoffPair(league, r){
+  const standings = computeStandings(league);
+  if(r===11) return [standings[0], standings[1]];
+  if(r===12) return [standings[2], standings[3]];
+  if(r===13){
+    const q1w = league.playoffWinners && league.playoffWinners[11];
+    const elw = league.playoffWinners && league.playoffWinners[12];
+    if(q1w==null || elw==null) return null;
+    const q1Pair = playoffPair(league, 11);
+    const q1Loser = q1w===q1Pair[0] ? q1Pair[1] : q1Pair[0];
+    return [q1Loser, elw];
+  }
+  if(r===14){
+    const q1w = league.playoffWinners && league.playoffWinners[11];
+    const q2w = league.playoffWinners && league.playoffWinners[13];
+    if(q1w==null || q2w==null) return null;
+    return [q1w, q2w];
+  }
+  return null;
+}
+function roundLabel(r){
+  if(r<=10) return 'Round '+r;
+  return {11:'Qualifier 1',12:'Eliminator',13:'Qualifier 2',14:'Final'}[r];
+}
+function eligibleLeagueTeams(usedCounts){
+  const allUsedOnce = TEAMS.every(t=>usedCounts[t.id]>0);
+  if(!allUsedOnce) return TEAMS.filter(t=>usedCounts[t.id]===0);
+  return TEAMS.filter(t=>usedCounts[t.id]<2);
+}
+/* Full per-player standings: alive status, eliminated round, and pick history. */
+function computePlayerStandings(league){
+  return (league.players||[]).map(pl=>{
+    let eliminatedAtRound = null;
+    const history = [];
+    const usedCounts = {0:0,1:0,2:0,3:0,4:0,5:0};
+    for(let r=1;r<=14;r++){
+      const pick = league.picks && league.picks[r] && league.picks[r][pl.id];
+      if(eliminatedAtRound!==null){
+        if(pick!=null) history.push({round:r, teamId:pick, result:'—'});
+        continue;
+      }
+      if(pick==null){
+        continue; // hasn't picked yet, or round doesn't apply to them (e.g. out already)
+      }
+      if(r<=10) usedCounts[pick]++;
+      let outcome;
+      if(r<=10){
+        const w = league.matchWinners && league.matchWinners[r];
+        if(!w || !leagueRoundComplete(league, r)){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
+        const fx = fixturesForRound(r);
+        const matchIdx = fx.findIndex(([a,b])=>a===pick||b===pick);
+        outcome = w[matchIdx]===pick;
+      } else {
+        const pw = league.playoffWinners && league.playoffWinners[r];
+        if(pw==null){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
+        outcome = pw===pick;
+      }
+      if(outcome){
+        history.push({round:r, teamId:pick, result:'Win'});
+      } else {
+        history.push({round:r, teamId:pick, result:'Loss'});
+        eliminatedAtRound = r;
+      }
+    }
+    return {...pl, alive: eliminatedAtRound===null, eliminatedAtRound, history, usedCounts};
+  });
+}
+function currentOpenRound(league){
+  for(let r=1;r<=14;r++){
+    if(r<=10){ if(!leagueRoundComplete(league, r)) return r; }
+    else { if(league.playoffWinners==null || league.playoffWinners[r]==null) return r; }
+  }
+  return 15; // tournament fully resolved
+}
+
+/* ---------- Rendering ---------- */
+async function render(){
+  const el = document.getElementById('app');
+  if(!state.code){ el.innerHTML = renderJoin(); return; }
+  if(!state.league){
+    state.league = await loadLeague(state.code);
+    if(!state.league){ state.code = null; el.innerHTML = renderJoin('Couldn\'t find a league with that code.'); return; }
+  }
+  el.innerHTML = renderLeague();
+}
+function renderJoin(err){
+  let html = '<div class="powered">Powered by Anticiplay</div>';
+  html += '<h1>Last Wicket Standing</h1>';
+  html += '<p class="sub">ILT20 Last Man Standing. Pick a team each round — lose and you\'re out. Every team must be picked once before any team can be picked a second time. Survive the 10-round league stage, then Qualifier 1, Eliminator, Qualifier 2, and the Final.</p>';
+  if(err) html += '<div class="card" style="border-color:var(--danger);"><p class="note" style="margin:0;color:var(--danger);">'+esc(err)+'</p></div>';
+  html += '<div class="card"><h3>Join a league</h3><div class="form-grid">';
+  html += '<div class="field full"><label>League code</label><input type="text" id="joinCode" placeholder="e.g. AB12C" style="text-transform:uppercase;"></div>';
+  html += '<div class="field full"><label>Your name</label><input type="text" id="joinName" placeholder="e.g. Dave"></div>';
+  html += '<div class="field full"><label>Email (optional)</label><input type="email" id="joinEmail" placeholder="e.g. you@example.com"></div>';
+  html += '</div><button class="btn-primary" style="margin-top:14px;" onclick="joinLeague()">Join League</button></div>';
+  html += '<div class="card"><h3>Start a new league</h3><div class="form-grid">';
+  html += '<div class="field full"><label>League name</label><input type="text" id="newName" placeholder="e.g. Desert Vipers Last Wicket Standing"></div>';
+  html += '<div class="field full"><label>Admin PIN (4 digits)</label><input type="text" id="newPin" maxlength="4" placeholder="e.g. 1234"></div>';
+  html += '</div><button class="btn-primary" style="margin-top:14px;" onclick="createLeague()">Create League</button></div>';
+  return '<div>'+html+'</div>';
+}
+async function createLeague(){
+  const name = document.getElementById('newName').value.trim();
+  const pin = document.getElementById('newPin').value.trim();
+  if(!name || !/^\d{4}$/.test(pin)){ alert('Enter a league name and a 4-digit PIN.'); return; }
+  const code = genCode();
+  const league = { code, name, adminPin: pin, players: [], picks: {}, matchWinners: {}, playoffWinners: {}, logo: null, createdAt: new Date().toISOString() };
+  await saveLeague(league);
+  state.code = code; state.league = league; state.adminUnlocked = true;
+  render();
+}
+async function joinLeague(){
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  const name = document.getElementById('joinName').value.trim();
+  const email = document.getElementById('joinEmail').value.trim();
+  if(!code || !name){ alert('Enter a league code and your name.'); return; }
+  const league = await loadLeague(code);
+  if(!league){ document.getElementById('app').innerHTML = renderJoin('Couldn\'t find a league with that code.'); return; }
+  const id = 'p_'+Date.now()+'_'+Math.floor(Math.random()*10000);
+  league.players.push({ id, name, email });
+  await saveLeague(league);
+  state.code = code; state.league = league; state.identity = { id };
+  render();
+}
+
+function renderLeague(){
+  const league = state.league;
+  const standings = computePlayerStandings(league);
+  const alive = standings.filter(s=>s.alive);
+  const me = state.identity ? standings.find(s=>s.id===state.identity.id) : null;
+  const round = currentOpenRound(league);
+
+  let html = '';
+  html += '<div class="powered">Powered by Anticiplay</div>';
+  if(league.logo && league.logo.image){
+    html += '<img src="'+league.logo.image+'" style="max-height:60px;max-width:220px;display:block;margin-bottom:10px;object-fit:contain;">';
+  }
+  html += '<h1>'+esc(league.name)+'</h1>';
+  html += '<p class="sub">Code: <span class="code-pill">'+esc(league.code)+'</span> · <a class="link" href="#" onclick="leaveLeague();return false;">Leave this league</a></p>';
+
+  html += '<div class="lms-status-strip">';
+  html += '<div class="lms-status-item"><span class="num">'+alive.length+'</span><span class="lbl">Still In</span></div>';
+  html += '<div class="lms-status-item"><span class="num">'+standings.length+'</span><span class="lbl">Total Players</span></div>';
+  html += '<div class="lms-status-item"><span class="num">'+(round<=14 ? roundLabel(round) : '—')+'</span><span class="lbl">Current Stage</span></div>';
+  if(me) html += '<div class="lms-status-item"><span class="num">'+(me.alive?'IN':'OUT')+'</span><span class="lbl">Your Status</span></div>';
+  html += '</div>';
+
+  // PICK CARD
+  if(me){
+    html += renderPickCard(league, me, round);
+  } else if(!state.identity){
+    html += '<div class="card"><h3>Add Yourself</h3><p class="note" style="margin-top:0;">Join this league with your name to start picking.</p><div class="form-grid"><div class="field full"><label>Your name</label><input type="text" id="addName" placeholder="e.g. Dave"></div><div class="field full"><label>Email (optional)</label><input type="email" id="addEmail" placeholder="e.g. you@example.com"></div></div><button class="btn-primary" style="margin-top:14px;" onclick="addMeAsPlayer()">Join</button></div>';
+  }
+
+  // ADMIN
+  html += renderAdmin(league, round);
+
+  // LEADERBOARD
+  html += '<div class="card"><h3>Leaderboard</h3><div style="overflow-x:auto;"><table><thead><tr><th>Player</th><th>Status</th><th>Pick History</th></tr></thead><tbody>';
+  standings.slice().sort((a,b)=>(b.alive-a.alive)||(b.eliminatedAtRound||999)-(a.eliminatedAtRound||999)).forEach(s=>{
+    const isMe = me && s.id===me.id;
+    const iHavePicked = me ? !!(league.picks[round] && league.picks[round][me.id]) : false;
+    const hist = s.history.map(h=>{
+      if(h.result==='Pending' && h.round===round && !isMe && !iHavePicked){
+        return 'Picked ✓ (hidden until you pick)';
+      }
+      return team(h.teamId).short + (h.result && h.result!=='—' && h.result!=='Pending' ? ' ('+h.result+')' : '');
+    }).join(', ') || '—';
+    html += '<tr><td>'+esc(s.name)+'</td><td><span class="status '+(s.alive?'alive':'out')+'">'+(s.alive?'Still In':'Out ('+roundLabel(s.eliminatedAtRound)+')')+'</span></td><td>'+esc(hist)+'</td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  return html;
+}
+
+async function addMeAsPlayer(){
+  const name = document.getElementById('addName').value.trim();
+  const email = document.getElementById('addEmail').value.trim();
+  if(!name){ alert('Enter your name.'); return; }
+  const league = state.league;
+  const id = 'p_'+Date.now()+'_'+Math.floor(Math.random()*10000);
+  league.players.push({ id, name, email });
+  await saveLeague(league);
+  state.identity = { id };
+  state.league = await loadLeague(state.code);
+  render();
+}
+function leaveLeague(){
+  state.code = null; state.league = null; state.identity = null; state.adminUnlocked = false;
+  render();
+}
+
+function renderPickCard(league, me, round){
+  if(!me.alive){
+    return '<div class="card"><h3>Make Your Pick</h3><p class="note" style="margin-top:0;">You\'re out of this season. Come back next season.</p></div>';
+  }
+  if(round>14){
+    return '<div class="card"><h3>Make Your Pick</h3><p class="note" style="margin-top:0;">The tournament is complete — check the leaderboard for the result.</p></div>';
+  }
+  const alreadyPicked = league.picks[round] && league.picks[round][me.id];
+  let html = '<div class="card"><h3>Make Your Pick — '+roundLabel(round)+'</h3>';
+  if(alreadyPicked!=null){
+    html += '<div class="result-strip"><div><div class="result-label">Locked In</div><div class="result-points">'+esc(team(alreadyPicked).name)+'</div></div></div>';
+    html += '<p class="note">Picks can\'t be changed once locked in.</p></div>';
+    return html;
+  }
+  let options;
+  if(round<=10){
+    const fx = fixturesForRound(round);
+    html += '<p class="note" style="margin-top:0;">Fixtures this round: '+fx.map(([a,b])=>team(a).short+' v '+team(b).short).join(', ')+'</p>';
+    const allUsedOnce = TEAMS.every(t=>me.usedCounts[t.id]>0);
+    html += '<p class="note">'+(allUsedOnce ? 'Second time round — pick any team you\'ve already used once.' : 'Every team must be picked once before any repeats.')+'</p>';
+    options = eligibleLeagueTeams(me.usedCounts);
+  } else {
+    const pair = playoffPair(league, round);
+    if(!pair){
+      html += '<p class="note" style="margin-top:0;">Waiting on the previous match to be settled before this fixture is known.</p></div>';
+      return html;
+    }
+    html += '<p class="note" style="margin-top:0;">'+team(pair[0]).name+' v '+team(pair[1]).name+'</p>';
+    options = pair.map(id=>team(id));
+  }
+  html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">';
+  options.forEach(t=>{
+    const staged = state.selectedTeam===t.id;
+    html += '<div class="team-chip'+(staged?' selected':'')+'" onclick="selectTeam('+t.id+')"><span class="crest" style="background:'+t.color+';">'+esc(t.short.slice(0,3).toUpperCase())+'</span><span class="team-name">'+esc(t.name)+'</span></div>';
+  });
+  html += '</div>';
+  const canLock = state.selectedTeam!=null;
+  html += '<button class="btn-primary" style="margin-top:16px;'+(canLock?'':'opacity:.4;cursor:not-allowed;')+'" '+(canLock?'onclick="lockPick()"':'disabled')+'>LOCK IN'+(canLock?': '+esc(team(state.selectedTeam).short).toUpperCase():'')+'</button>';
+  html += '</div>';
+  return html;
+}
+function selectTeam(id){ state.selectedTeam = id; render(); }
+async function lockPick(){
+  if(state.selectedTeam==null) return;
+  const league = state.league;
+  const round = currentOpenRound(league);
+  if(!league.picks[round]) league.picks[round] = {};
+  league.picks[round][state.identity.id] = state.selectedTeam;
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  state.selectedTeam = null;
+  render();
+}
+
+function renderAdmin(league, round){
+  let html = '<div class="card"><h3>Admin — Enter Results</h3>';
+  if(!state.adminUnlocked){
+    html += '<div class="form-grid"><div class="field full"><label>Admin PIN</label><input type="text" id="adminPinInput" maxlength="4"></div></div>';
+    html += '<button class="btn-secondary" style="margin-top:12px;" onclick="checkAdminPin()">Unlock Admin</button></div>';
+    return html;
+  }
+  html += '<p style="margin:-8px 0 12px;"><a class="link" href="#" onclick="state.adminUnlocked=false;render();return false;">Log out of admin</a></p>';
+
+  if(round>14){
+    html += '<p class="note" style="margin-top:0;">Tournament complete.</p></div>';
+    return html;
+  }
+
+  if(round<=10){
+    const fx = fixturesForRound(round);
+    if(!league.matchWinners[round]) league.matchWinners[round] = [null,null,null];
+    html += '<p class="note" style="margin-top:0;">Enter the winner of each match in '+roundLabel(round)+'.</p>';
+    fx.forEach(([a,b],i)=>{
+      const cur = league.matchWinners[round][i];
+      html += '<div class="fixture-row">'+team(a).short+' v '+team(b).short+'&nbsp;&nbsp;';
+      html += '<button class="win-btn'+(cur===a?' active':'')+'" onclick="setLeagueWinner('+round+','+i+','+a+')">'+team(a).short+' won</button>';
+      html += '<button class="win-btn'+(cur===b?' active':'')+'" onclick="setLeagueWinner('+round+','+i+','+b+')">'+team(b).short+' won</button>';
+      html += '</div>';
+    });
+    const allSet = league.matchWinners[round].every(x=>x!=null);
+    html += '<button class="btn-primary" style="margin-top:16px;" '+(allSet?'':'disabled')+' onclick="settleAdmin()">Settle '+roundLabel(round)+'</button>';
+  } else {
+    const pair = playoffPair(league, round);
+    if(!pair){
+      html += '<p class="note" style="margin-top:0;">Waiting on an earlier playoff match to be settled first.</p></div>';
+      return html;
+    }
+    const cur = league.playoffWinners[round];
+    html += '<p class="note" style="margin-top:0;">Enter the winner of '+roundLabel(round)+': '+team(pair[0]).name+' v '+team(pair[1]).name+'.</p>';
+    html += '<div class="fixture-row">';
+    html += '<button class="win-btn'+(cur===pair[0]?' active':'')+'" onclick="setPlayoffWinner('+round+','+pair[0]+')">'+team(pair[0]).short+' won</button>';
+    html += '<button class="win-btn'+(cur===pair[1]?' active':'')+'" onclick="setPlayoffWinner('+round+','+pair[1]+')">'+team(pair[1]).short+' won</button>';
+    html += '</div>';
+    html += '<button class="btn-primary" style="margin-top:16px;" '+(cur!=null?'':'disabled')+' onclick="settleAdmin()">Settle '+roundLabel(round)+'</button>';
+  }
+
+  html += renderBrandingAdmin(league);
+  html += renderDangerZone();
+  html += '</div>';
+  return html;
+}
+function checkAdminPin(){
+  const val = document.getElementById('adminPinInput').value.trim();
+  if(val === state.league.adminPin){ state.adminUnlocked = true; render(); }
+  else alert('Wrong PIN.');
+}
+async function setLeagueWinner(round, matchIdx, teamId){
+  const league = state.league;
+  if(!league.matchWinners[round]) league.matchWinners[round] = [null,null,null];
+  league.matchWinners[round][matchIdx] = teamId;
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
+}
+async function setPlayoffWinner(round, teamId){
+  const league = state.league;
+  if(!league.playoffWinners) league.playoffWinners = {};
+  league.playoffWinners[round] = teamId;
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
+}
+async function settleAdmin(){
+  state.league = await loadLeague(state.code);
+  render();
+}
+function renderBrandingAdmin(league){
+  let html = '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">';
+  html += '<h3 style="margin-bottom:10px;">Branding</h3>';
+  if(league.logo && league.logo.image){
+    html += '<img src="'+league.logo.image+'" style="max-height:70px;max-width:200px;display:block;margin-bottom:10px;background:#fff;padding:6px;border-radius:6px;">';
+  }
+  html += '<div class="form-grid"><div class="field full"><label>Group / sponsor logo</label><input type="file" accept="image/*" id="logoInput"></div></div>';
+  html += '<button class="btn-secondary" style="margin-top:10px;" onclick="saveLogo()">Save Logo</button>';
+  html += '</div>';
+  return html;
+}
+function resizeImageFile(file, maxWidth){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = ()=>{
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function saveLogo(){
+  const fileInput = document.getElementById('logoInput');
+  if(!fileInput.files || !fileInput.files[0]){ alert('Choose a logo image first.'); return; }
+  const league = state.league;
+  league.logo = { image: await resizeImageFile(fileInput.files[0], 400) };
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
+}
+function renderDangerZone(){
+  return '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">'
+    + '<h3 style="color:var(--danger);margin-bottom:10px;">Danger Zone</h3>'
+    + '<button class="btn-secondary" style="border-color:var(--danger);color:var(--danger);" onclick="deleteLeague()">Delete This League</button>'
+    + '</div>';
+}
+async function deleteLeague(){
+  if(!confirm('Permanently delete "'+state.league.name+'"? This cannot be undone.')) return;
+  await sb.from(TABLE).delete().eq('code', state.code);
+  leaveLeague();
+}
+
+render();
+</script>
+</body>
+</html>
