@@ -82,9 +82,15 @@
   .team-name{font-family:'Inter Tight',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.02em;}
   .fixture-row{display:grid;grid-template-columns:38px 122px 22px 38px 1fr;align-items:center;column-gap:12px;font-family:'Inter Tight',sans-serif;font-size:13px;padding:10px 0;border-bottom:1px solid rgba(74,58,47,0.35);}
   .fixture-row:last-child{border-bottom:none;}
-  .fixture-row .badge-box{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;flex-shrink:0;}
-  .fixture-row .badge-box img{max-width:80%;max-height:80%;object-fit:contain;display:block;}
-  .fixture-row .vs{text-align:center;color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  .badge-box{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;flex-shrink:0;}
+  .badge-box img{max-width:80%;max-height:80%;object-fit:contain;display:block;}
+  .vs{text-align:center;color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  .admin-match-row{background:var(--pitch-800);border:1px solid var(--pitch-line);border-radius:8px;padding:14px;margin-bottom:12px;}
+  .admin-match-row .teams-line{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:12px;}
+  .admin-match-row .team-side{display:flex;align-items:center;gap:8px;}
+  .admin-match-row .team-side.right{justify-content:flex-end;}
+  .admin-match-row .buttons-line{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .admin-match-row .win-btn{width:100%;text-align:center;padding:10px 8px;}
   .result-strip{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(90deg, rgba(255,215,0,0.10), transparent);border:1px solid var(--floodlight-dim);border-radius:8px;padding:16px 20px;margin-top:8px;}
   .result-label{font-family:'Inter Tight',sans-serif;text-transform:uppercase;font-size:13px;color:var(--chalk-dim);letter-spacing:.03em;}
   .result-points{font-family:'Inter Tight',monospace;font-size:22px;font-weight:700;color:var(--floodlight);letter-spacing:.04em;}
@@ -188,6 +194,24 @@ function computeStandings(league){
     if(w) w.forEach(id=>{ if(id!==null) wins[id]++; });
   }
   return [0,1,2,3,4,5].slice().sort((a,b)=> wins[b]-wins[a] || a-b);
+}
+function computeLeagueTable(league){
+  const stats = {};
+  TEAMS.forEach(t=>{ stats[t.id] = { teamId:t.id, played:0, won:0, lost:0 }; });
+  for(let r=1;r<=10;r++){
+    const fx = fixturesForRound(r);
+    const w = league.matchWinners && league.matchWinners[r];
+    fx.forEach(([a,b], idx)=>{
+      const winner = w ? w[idx] : null;
+      if(winner==null) return;
+      stats[a].played++; stats[b].played++;
+      if(winner===a){ stats[a].won++; stats[b].lost++; }
+      else { stats[b].won++; stats[a].lost++; }
+    });
+  }
+  const arr = Object.values(stats).map(s=>({ ...s, points: s.won*2 }));
+  arr.sort((a,b)=> b.points-a.points || b.won-a.won || a.teamId-b.teamId);
+  return arr;
 }
 function leagueRoundComplete(league, r){
   const w = league.matchWinners && league.matchWinners[r];
@@ -327,6 +351,22 @@ function nextFixtureForTeam(teamId, fromRound){
   }
   return 'No more league-stage fixtures scheduled (playoffs depend on final standings)';
 }
+function renderLeagueTableCard(league){
+  const table = computeLeagueTable(league);
+  let html = '<div class="card"><h3>League Table</h3>';
+  html += '<p class="note" style="margin-top:0;">Built from results your league\'s admin has entered so far \u2014 not yet connected to a live cricket data feed, so it only updates when a round is settled here. Going live later would need a data source similar to the football-data.org feed the Anticiplay football app uses (cricket doesn\'t have as clean a free equivalent, so that\'d likely mean a paid cricket data API).</p>';
+  html += '<div style="overflow-x:auto;"><table><thead><tr><th>Pos</th><th>Team</th><th>P</th><th>W</th><th>L</th><th>Pts</th></tr></thead><tbody>';
+  table.forEach((row, i)=>{
+    html += '<tr><td>'+(i+1)+'</td>'
+      + '<td><div style="display:flex;align-items:center;gap:8px;">'+kitSVG(row.teamId)+'<span>'+esc(team(row.teamId).short)+'</span></div></td>'
+      + '<td>'+row.played+'</td><td>'+row.won+'</td><td>'+row.lost+'</td>'
+      + '<td style="color:var(--floodlight);font-weight:700;">'+row.points+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '<p class="note" style="margin-top:10px;">2 points per win. Ties broken by wins, then alphabetically \u2014 no net run rate yet, since that needs real match data we don\'t have manually.</p>';
+  html += '</div>';
+  return html;
+}
 function renderMyLeagueTab(){
   const league = state.league;
   const standings = computePlayerStandings(league);
@@ -334,7 +374,8 @@ function renderMyLeagueTab(){
   const round = currentOpenRound(league);
   const usedCounts = me ? me.usedCounts : {0:0,1:0,2:0,3:0,4:0,5:0};
 
-  let html = '<div class="card"><h3>'+esc(league.name)+' \u2014 My League</h3>';
+  let html = renderLeagueTableCard(league);
+  html += '<div class="card"><h3>'+esc(league.name)+' \u2014 My League</h3>';
   if(!me){
     html += '<p class="note" style="margin-top:0;">You haven\'t joined this league as a player yet \u2014 join on the Home tab to track your own picks here. Showing the season schedule below either way.</p>';
   }
@@ -648,6 +689,19 @@ async function lockPick(){
   render();
 }
 
+function adminMatchRowHTML(a, b, curWinner, onClickA, onClickB){
+  return '<div class="admin-match-row">'
+    + '<div class="teams-line">'
+    +   '<div class="team-side"><div class="badge-box">'+kitSVG(a)+'</div><span class="team-name">'+esc(team(a).short)+'</span></div>'
+    +   '<span class="vs">v</span>'
+    +   '<div class="team-side right"><span class="team-name">'+esc(team(b).short)+'</span><div class="badge-box">'+kitSVG(b)+'</div></div>'
+    + '</div>'
+    + '<div class="buttons-line">'
+    +   '<button class="win-btn'+(curWinner===a?' active':'')+'" onclick="'+onClickA+'">'+esc(team(a).short)+' won</button>'
+    +   '<button class="win-btn'+(curWinner===b?' active':'')+'" onclick="'+onClickB+'">'+esc(team(b).short)+' won</button>'
+    + '</div>'
+    + '</div>';
+}
 function renderAdmin(league, round){
   let html = '<div class="card"><h3>Admin — Enter Results</h3>';
   if(!state.adminUnlocked){
@@ -668,10 +722,7 @@ function renderAdmin(league, round){
     html += '<p class="note" style="margin-top:0;">Enter the winner of each match in '+roundLabel(round)+'.</p>';
     fx.forEach(([a,b],i)=>{
       const cur = league.matchWinners[round][i];
-      html += '<div class="fixture-row">'+team(a).short+' v '+team(b).short+'&nbsp;&nbsp;';
-      html += '<button class="win-btn'+(cur===a?' active':'')+'" onclick="setLeagueWinner('+round+','+i+','+a+')">'+team(a).short+' won</button>';
-      html += '<button class="win-btn'+(cur===b?' active':'')+'" onclick="setLeagueWinner('+round+','+i+','+b+')">'+team(b).short+' won</button>';
-      html += '</div>';
+      html += adminMatchRowHTML(a, b, cur, "setLeagueWinner("+round+","+i+","+a+")", "setLeagueWinner("+round+","+i+","+b+")");
     });
     const allSet = league.matchWinners[round].every(x=>x!=null);
     html += '<button class="btn-primary" style="margin-top:16px;" '+(allSet?'':'disabled')+' onclick="settleAdmin()">Settle '+roundLabel(round)+'</button>';
@@ -683,10 +734,7 @@ function renderAdmin(league, round){
     }
     const cur = league.playoffWinners[round];
     html += '<p class="note" style="margin-top:0;">Enter the winner of '+roundLabel(round)+': '+team(pair[0]).name+' v '+team(pair[1]).name+'.</p>';
-    html += '<div class="fixture-row">';
-    html += '<button class="win-btn'+(cur===pair[0]?' active':'')+'" onclick="setPlayoffWinner('+round+','+pair[0]+')">'+team(pair[0]).short+' won</button>';
-    html += '<button class="win-btn'+(cur===pair[1]?' active':'')+'" onclick="setPlayoffWinner('+round+','+pair[1]+')">'+team(pair[1]).short+' won</button>';
-    html += '</div>';
+    html += adminMatchRowHTML(pair[0], pair[1], cur, "setPlayoffWinner("+round+","+pair[0]+")", "setPlayoffWinner("+round+","+pair[1]+")");
     html += '<button class="btn-primary" style="margin-top:16px;" '+(cur!=null?'':'disabled')+' onclick="settleAdmin()">Settle '+roundLabel(round)+'</button>';
   }
 
