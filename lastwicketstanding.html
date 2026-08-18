@@ -185,6 +185,23 @@ function genCode(){
   for(let i=0;i<5;i++) c += chars[Math.floor(Math.random()*chars.length)];
   return c;
 }
+function leagueShareLink(code){
+  return window.location.origin + window.location.pathname + '?code=' + code;
+}
+async function copyText(text, btnId){
+  try{
+    await navigator.clipboard.writeText(text);
+  } catch(e){
+    alert('Couldn\'t copy automatically \u2014 here\'s the link:\n\n' + text);
+    return;
+  }
+  const btn = document.getElementById(btnId);
+  if(btn){
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(()=>{ if(document.getElementById(btnId)) document.getElementById(btnId).textContent = orig; }, 1500);
+  }
+}
 
 /* ---------- Game logic ---------- */
 function computeStandings(league){
@@ -295,7 +312,7 @@ function currentOpenRound(league){
 /* ---------- Rendering ---------- */
 function setTab(tab){ state.tab = tab; render(); }
 function renderNav(){
-  const tabs = [['home','Home'],['myleague','My League'],['leaguetable','League Table'],['fixtures','Fixtures'],['rules','How It Works'],['contact','Contact'],['siteadmin','Site Admin']];
+  const tabs = [['home','Home'],['myleague','My League'],['leaguetable','League Table'],['fixtures','Fixtures'],['rules','How It Works'],['siteadmin','Site Admin']];
   let html = '<nav class="main-nav">';
   tabs.forEach(([key,label])=>{
     html += '<button class="'+(state.tab===key?'active':'')+'" onclick="setTab(\''+key+'\')">'+label+'</button>';
@@ -304,7 +321,7 @@ function renderNav(){
   return html;
 }
 function renderFooterLinks(){
-  return '<div class="footer-links"><a class="link" href="terms.html">Terms</a> · <a class="link" href="privacy.html">Privacy</a></div>';
+  return '<div class="footer-links"><a class="link" href="#" onclick="setTab(\'contact\');return false;">Contact</a> · <a class="link" href="terms.html">Terms</a> · <a class="link" href="privacy.html">Privacy</a></div>';
 }
 async function render(){
   const el = document.getElementById('app');
@@ -485,12 +502,17 @@ async function renderSiteAdminTab(){
       const standings = computePlayerStandings(lg);
       const alive = standings.filter(s=>s.alive).length;
       const round = currentOpenRound(lg);
+      const copyBtnId = 'copyLink_'+lg.code;
       html += '<tr>'
         + '<td>'+esc(lg.name)+'</td>'
         + '<td><span class="code-pill">'+esc(lg.code)+'</span></td>'
         + '<td>'+alive+' in / '+standings.length+' total</td>'
         + '<td>'+(round<=14 ? roundLabel(round) : 'Complete')+'</td>'
-        + '<td style="white-space:nowrap;"><a class="link" href="#" onclick="viewLeagueFromSiteAdmin(\''+esc(lg.code)+'\');return false;">View</a> · <a class="link" href="#" style="color:var(--danger);" onclick="deleteLeagueFromSiteAdmin(\''+esc(lg.code)+'\',\''+esc(lg.name).replace(/'/g,"\\'")+'\');return false;">Delete</a></td>'
+        + '<td style="white-space:nowrap;">'
+        +   '<a class="link" href="#" onclick="viewLeagueFromSiteAdmin(\''+esc(lg.code)+'\');return false;">Open</a> · '
+        +   '<a class="link" href="#" style="color:var(--danger);" onclick="deleteLeagueFromSiteAdmin(\''+esc(lg.code)+'\',\''+esc(lg.name).replace(/'/g,"\\'")+'\');return false;">Remove</a> · '
+        +   '<a class="link" href="#" id="'+copyBtnId+'" onclick="copyText(\''+esc(leagueShareLink(lg.code)).replace(/'/g,"\\'")+'\',\''+copyBtnId+'\');return false;">Copy</a>'
+        + '</td>'
         + '</tr>';
     });
     html += '</tbody></table></div>';
@@ -625,6 +647,10 @@ function renderLeague(){
   }
   html += '<h1>'+esc(league.name)+'</h1>';
   html += '<p class="sub">Code: <span class="code-pill">'+esc(league.code)+'</span> · <a class="link" href="#" onclick="leaveLeague();return false;">Leave this league</a></p>';
+  html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 18px;">'
+    + '<input readonly value="'+esc(leagueShareLink(league.code))+'" onclick="this.select();" style="flex:1;min-width:200px;background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;color:var(--chalk-dim);padding:9px 10px;font-size:12px;font-family:\'Inter Tight\',monospace;">'
+    + '<button id="copyLeagueLinkBtn" class="btn-secondary" onclick="copyText(\''+esc(leagueShareLink(league.code)).replace(/'/g,"\\'")+'\',\'copyLeagueLinkBtn\')">Copy Link</button>'
+    + '</div>';
 
   html += '<div class="lms-status-strip">';
   html += '<div class="lms-status-item"><span class="num">'+alive.length+'</span><span class="lbl">Still In</span></div>';
