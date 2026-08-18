@@ -103,12 +103,12 @@ const TABLE = 'lws_leagues';
 
 /* ---------- Teams (ILT20) ---------- */
 const TEAMS = [
-  {id:0, name:'Abu Dhabi Knight Riders', short:'ADKR', color:'#5B2A86'},
-  {id:1, name:'Desert Vipers', short:'Vipers', color:'#7A1F2B'},
-  {id:2, name:'Dubai Capitals', short:'Capitals', color:'#D6274B'},
-  {id:3, name:'Gulf Giants', short:'Giants', color:'#F4791F'},
-  {id:4, name:'MI Emirates', short:'MIE', color:'#1B3F8B'},
-  {id:5, name:'Sharjah Warriorz', short:'Warriorz', color:'#8B6F1F'}
+  {id:0, name:'Abu Dhabi Knight Riders', short:'ADKR', kit:{shirt:'#3B1E6E', sleeve:'#FFD700', trim:'#FFD700', shorts:'#1A0F35'}},
+  {id:1, name:'Desert Vipers', short:'Vipers', kit:{shirt:'#159654', sleeve:'#101010', trim:'#FFFFFF', shorts:'#159654'}},
+  {id:2, name:'Dubai Capitals', short:'Capitals', kit:{shirt:'#0B2A5B', sleeve:'#C8102E', trim:'#C8102E', shorts:'#0B2A5B'}},
+  {id:3, name:'Gulf Giants', short:'Giants', kit:{shirt:'#F26A21', sleeve:'#FFC72C', trim:'#FFC72C', shorts:'#1A1A1A'}},
+  {id:4, name:'MI Emirates', short:'MIE', kit:{shirt:'#0057A6', sleeve:'#FFC72C', trim:'#FFC72C', shorts:'#0057A6'}},
+  {id:5, name:'Sharjah Warriorz', short:'Warriorz', kit:{shirt:'#F4C430', sleeve:'#3B1E6E', trim:'#3B1E6E', shorts:'#3B1E6E'}}
 ];
 const BASE_ROUNDS = [
   [[0,5],[1,4],[2,3]],
@@ -120,9 +120,21 @@ const BASE_ROUNDS = [
 function fixturesForRound(r){ return BASE_ROUNDS[(r-1)%5]; }
 function team(id){ return TEAMS[id]; }
 function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function crestHTML(id){
+function kitSVG(id){
   const t = team(id);
-  return '<span class="crest" style="background:'+t.color+';">'+esc(t.short.slice(0,3).toUpperCase())+'</span>';
+  const k = t.kit;
+  const outline = 'rgba(255,255,255,0.22)';
+  return '<svg viewBox="0 0 100 110" style="width:30px;height:34px;display:block;flex-shrink:0;">'
+    + '<path d="M50 8 L62 16 Q72 20 76 30 L82 46 Q84 50 80 53 L68 58 Q64 50 60 42 L62 88 Q62 94 56 94 L44 94 Q38 94 38 88 L40 42 Q36 50 32 58 L20 53 Q16 50 18 46 L24 30 Q28 20 38 16 Z" fill="'+k.shirt+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<path d="M62 16 Q72 20 76 30 L82 46 Q84 50 80 53 L68 58 Q64 50 60 42 L60 30 Z" fill="'+k.sleeve+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<path d="M38 16 Q28 20 24 30 L18 46 Q16 50 20 53 L32 58 Q36 50 40 42 L40 30 Z" fill="'+k.sleeve+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<path d="M42 10 L50 18 L58 10" stroke="'+k.trim+'" stroke-width="3" fill="none" stroke-linecap="round"/>'
+    + '<rect x="38" y="88" width="24" height="16" rx="2" fill="'+k.shorts+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<rect x="38" y="88" width="24" height="3" fill="'+k.trim+'"/>'
+    + '</svg>';
+}
+function crestHTML(id){
+  return kitSVG(id);
 }
 
 /* ---------- App state ---------- */
@@ -384,7 +396,7 @@ function renderPickCard(league, me, round){
   html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">';
   options.forEach(t=>{
     const staged = state.selectedTeam===t.id;
-    html += '<div class="team-chip'+(staged?' selected':'')+'" onclick="selectTeam('+t.id+')"><span class="crest" style="background:'+t.color+';">'+esc(t.short.slice(0,3).toUpperCase())+'</span><span class="team-name">'+esc(t.name)+'</span></div>';
+    html += '<div class="team-chip'+(staged?' selected':'')+'" onclick="selectTeam('+t.id+')">'+kitSVG(t.id)+'<span class="team-name">'+esc(t.name)+'</span></div>';
   });
   html += '</div>';
   const canLock = state.selectedTeam!=null;
