@@ -2,6 +2,357 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>Last Wicket Standing — Fixtures</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch-950:#0A0A0A; --pitch-900:#121212; --pitch-800:#241C14; --pitch-line:#4A3A2F;
+    --chalk:#FFFFFF; --chalk-dim:#C4B7AE; --floodlight:#FFD700; --floodlight-dim:#B8960A;
+    --brass:#22C55E; --danger:#E0796B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 600px at 50% -10%, rgba(255,215,0,0.08), transparent 60%),
+      linear-gradient(180deg, var(--pitch-950), var(--pitch-900) 40%, var(--pitch-950));
+    color:var(--chalk); font-family:'Inter Tight', Georgia, serif; font-weight:700; min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 80px;}
+  h1{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:clamp(26px,5vw,38px);letter-spacing:-0.01em;margin:8px 0 6px;text-transform:uppercase;color:var(--floodlight);}
+  .sub{color:var(--chalk-dim);font-size:14px;max-width:560px;line-height:1.5;margin-bottom:22px;}
+  .powered{font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+  .back{color:var(--floodlight);text-decoration:none;font-size:13px;text-transform:uppercase;letter-spacing:.04em;}
+  .back:hover{text-decoration:underline;}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));border:1px solid var(--pitch-line);border-radius:10px;padding:20px 22px;margin-bottom:14px;}
+  .round-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
+  .round-head h2{font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.03em;font-size:14px;color:var(--floodlight);margin:0;}
+  .round-date{font-family:'Inter Tight',monospace;font-size:12px;color:var(--chalk-dim);}
+  .fixture-row{display:flex;align-items:center;gap:10px;padding:6px 0;}
+  .fixture-row .kit{width:22px;height:26px;}
+  .fixture-name{font-family:'Inter Tight',sans-serif;font-size:13px;}
+  .vs{color:var(--chalk-dim);font-size:11px;padding:0 4px;}
+  .note{color:var(--chalk-dim);font-size:12px;line-height:1.6;margin-top:6px;}
+  .playoff-card{border-color:var(--floodlight-dim);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="powered">Powered by Anticiplay</div>
+  <a class="back" href="lastwicketstanding.html">&larr; Back to Last Wicket Standing</a>
+  <h1>Fixtures</h1>
+  <p class="sub">Based on last season's ILT20 schedule (2 December 2025 – 4 January 2026), mapped onto the 10-round league stage plus playoffs used in Last Wicket Standing. This season's official schedule will replace these once announced.</p>
+  <div id="fixturesRoot"></div>
+</div>
+
+<script>
+const TEAMS = [
+  {id:0, name:'Abu Dhabi Knight Riders', short:'ADKR', kit:{shirt:'#3B1E6E', sleeve:'#FFD700', trim:'#FFD700', shorts:'#1A0F35'}},
+  {id:1, name:'Desert Vipers', short:'Vipers', kit:{shirt:'#159654', sleeve:'#101010', trim:'#FFFFFF', shorts:'#159654'}},
+  {id:2, name:'Dubai Capitals', short:'Capitals', kit:{shirt:'#0B2A5B', sleeve:'#C8102E', trim:'#C8102E', shorts:'#0B2A5B'}},
+  {id:3, name:'Gulf Giants', short:'Giants', kit:{shirt:'#F26A21', sleeve:'#FFC72C', trim:'#FFC72C', shorts:'#1A1A1A'}},
+  {id:4, name:'MI Emirates', short:'MIE', kit:{shirt:'#0057A6', sleeve:'#FFC72C', trim:'#FFC72C', shorts:'#0057A6'}},
+  {id:5, name:'Sharjah Warriorz', short:'Warriorz', kit:{shirt:'#F4C430', sleeve:'#3B1E6E', trim:'#3B1E6E', shorts:'#3B1E6E'}}
+];
+const BASE_ROUNDS = [
+  [[0,5],[1,4],[2,3]],[[0,4],[5,3],[1,2]],[[0,3],[4,2],[5,1]],[[0,2],[3,1],[4,5]],[[0,1],[2,5],[3,4]]
+];
+function fixturesForRound(r){ return BASE_ROUNDS[(r-1)%5]; }
+function team(id){ return TEAMS[id]; }
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function kitSVG(id){
+  const k = team(id).kit;
+  const outline = 'rgba(255,255,255,0.22)';
+  return '<svg viewBox="0 0 100 110" class="kit">'
+    + '<path d="M50 8 L62 16 Q72 20 76 30 L82 46 Q84 50 80 53 L68 58 Q64 50 60 42 L62 88 Q62 94 56 94 L44 94 Q38 94 38 88 L40 42 Q36 50 32 58 L20 53 Q16 50 18 46 L24 30 Q28 20 38 16 Z" fill="'+k.shirt+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<path d="M62 16 Q72 20 76 30 L82 46 Q84 50 80 53 L68 58 Q64 50 60 42 L60 30 Z" fill="'+k.sleeve+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<path d="M38 16 Q28 20 24 30 L18 46 Q16 50 20 53 L32 58 Q36 50 40 42 L40 30 Z" fill="'+k.sleeve+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<path d="M42 10 L50 18 L58 10" stroke="'+k.trim+'" stroke-width="3" fill="none" stroke-linecap="round"/>'
+    + '<rect x="38" y="88" width="24" height="16" rx="2" fill="'+k.shorts+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<rect x="38" y="88" width="24" height="3" fill="'+k.trim+'"/>'
+    + '</svg>';
+}
+function fixtureRow(a,b){
+  return '<div class="fixture-row">'+kitSVG(a)+'<span class="fixture-name">'+esc(team(a).name)+'</span><span class="vs">v</span>'+kitSVG(b)+'<span class="fixture-name">'+esc(team(b).name)+'</span></div>';
+}
+
+const ROUND_DATES = ['2 Dec 2025','4 Dec 2025','7 Dec 2025','9 Dec 2025','12 Dec 2025','14 Dec 2025','17 Dec 2025','20 Dec 2025','21 Dec 2025','26 Dec 2025'];
+const PLAYOFFS = [
+  {label:'Qualifier 1', date:'30 Dec 2025', note:'1st place v 2nd place'},
+  {label:'Eliminator', date:'1 Jan 2026', note:'3rd place v 4th place'},
+  {label:'Qualifier 2', date:'2 Jan 2026', note:'Loser of Qualifier 1 v winner of the Eliminator'},
+  {label:'Final', date:'4 Jan 2026', note:'Winner of Qualifier 1 v winner of Qualifier 2'}
+];
+
+let html = '';
+for(let r=1;r<=10;r++){
+  html += '<div class="card"><div class="round-head"><h2>Round '+r+'</h2><span class="round-date">'+ROUND_DATES[r-1]+'</span></div>';
+  fixturesForRound(r).forEach(([a,b])=>{ html += fixtureRow(a,b); });
+  html += '</div>';
+}
+html += '<div class="card playoff-card"><div class="round-head"><h2>Playoffs</h2></div>';
+PLAYOFFS.forEach(p=>{
+  html += '<div style="margin-bottom:10px;"><div class="round-head" style="margin-bottom:2px;"><span style="font-family:\'Inter Tight\',sans-serif;font-size:13px;color:var(--chalk);">'+p.label+'</span><span class="round-date">'+p.date+'</span></div><div class="note" style="margin-top:0;">'+p.note+'</div></div>';
+});
+html += '</div>';
+
+document.getElementById('fixturesRoot').innerHTML = html;
+</script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Last Wicket Standing — Terms &amp; Conditions</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch-950:#0A0A0A; --pitch-900:#121212; --pitch-800:#241C14; --pitch-line:#4A3A2F;
+    --chalk:#FFFFFF; --chalk-dim:#C4B7AE; --floodlight:#FFD700; --floodlight-dim:#B8960A;
+    --brass:#22C55E; --danger:#E0796B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 600px at 50% -10%, rgba(255,215,0,0.08), transparent 60%),
+      linear-gradient(180deg, var(--pitch-950), var(--pitch-900) 40%, var(--pitch-950));
+    color:var(--chalk); font-family:'Inter Tight', Georgia, serif; font-weight:700; min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 80px;}
+  h1{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:clamp(26px,5vw,38px);letter-spacing:-0.01em;margin:8px 0 6px;text-transform:uppercase;color:var(--floodlight);}
+  .updated{color:var(--chalk-dim);font-size:13px;margin-bottom:26px;}
+  .powered{font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+  .back{color:var(--floodlight);text-decoration:none;font-size:13px;text-transform:uppercase;letter-spacing:.04em;}
+  .back:hover{text-decoration:underline;}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));border:1px solid var(--pitch-line);border-radius:10px;padding:22px 24px;margin-bottom:16px;}
+  .card h2{font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.03em;font-size:15px;color:var(--floodlight);margin:0 0 12px;}
+  .card p, .card li{color:var(--chalk-dim);font-size:14px;line-height:1.65;font-weight:400;}
+  .card p{margin:0 0 10px;}
+  .card ul{margin:0 0 10px;padding-left:20px;}
+  .card li{margin-bottom:6px;}
+  strong{color:var(--chalk);font-weight:700;}
+  .note{background:var(--pitch-800);border:1px solid var(--floodlight-dim);border-radius:8px;padding:14px 18px;margin-bottom:24px;color:var(--chalk-dim);font-size:13px;line-height:1.6;}
+  .note strong{color:var(--floodlight);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="powered">Powered by Anticiplay</div>
+  <a class="back" href="lastwicketstanding.html">&larr; Back to Last Wicket Standing</a>
+  <h1>Terms &amp; Conditions</h1>
+  <div class="updated">Last updated: August 2026</div>
+
+  <div class="note">
+    <strong>In short:</strong> Last Wicket Standing is free to enter. No cash prize is ever funded by
+    entrant payments — any prize offered comes from sponsorship, not from your entry. This is an
+    independent prediction game and is not an official ILT20, Emirates Cricket Board, or franchise
+    product unless separately stated for a specific league.
+  </div>
+
+  <div class="card">
+    <h2>1. Who we are</h2>
+    <p>Last Wicket Standing ("we", "us", "the Service") operates a free-to-play Last Man Standing
+    prediction game covering the DP World International League T20 (ILT20). It is produced by
+    Anticiplay and, unless a specific league states otherwise, is an independent fan competition —
+    not an official product of the ILT20, the Emirates Cricket Board, or any participating
+    franchise. Team names referenced are used for identification purposes only.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Eligibility</h2>
+    <p>You must be at least 16 years old to create an account and take part. If you are under 18,
+    you confirm you have your parent or guardian's permission to use the Service.</p>
+  </div>
+
+  <div class="card">
+    <h2>3. How the game works</h2>
+    <ul>
+      <li>Entry is free. There is no charge to pick, and no cash prize is funded from participant entries.</li>
+      <li>Each round, you pick one ILT20 team you think will win their match. Lose, and you're
+      out for the season.</li>
+      <li>Every team must be picked once before any team can be picked a second time, and no team
+      can be picked more than twice across the league stage. Full rules are on the
+      <a class="back" href="rules.html">How It Works</a> page.</li>
+      <li>We may correct scoring errors at any time, including after a round has been settled, if a
+      genuine mistake is found.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>4. Private leagues and branding</h2>
+    <p>Where a private league carries a sponsor or brand — including any co-branded league — that
+    branding does not imply the sponsor is responsible for operating the Service, and any fee (if
+    one applies to a specific league) is <strong>not</strong> a prize pool. League organisers are
+    responsible for communicating their own league's rules clearly to their members.</p>
+  </div>
+
+  <div class="card">
+    <h2>5. Prizes and sponsorship</h2>
+    <p>Where a prize is offered, it is funded by us or by a sponsor — never from entrants'
+    payments. Prize eligibility, value, and any tax responsibility (which rests with the winner)
+    will be described alongside the specific league or promotion.</p>
+  </div>
+
+  <div class="card">
+    <h2>6. Account and conduct</h2>
+    <ul>
+      <li>You are responsible for keeping your account details secure and for all activity on your account.</li>
+      <li>One entry per person per league. Creating multiple entries to gain an unfair advantage
+      may result in disqualification and removal from the league.</li>
+      <li>We may suspend or remove a player for cheating, abuse, attempts to manipulate results, or
+      breach of these terms.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>7. Disclaimers and liability</h2>
+    <p>The Service is provided "as is". We do our best to keep it accurate and available, but we
+    don't guarantee uninterrupted access or that results will always be free of error. To the
+    extent permitted by law, we are not liable for indirect or consequential losses arising from
+    your use of the Service.</p>
+  </div>
+
+  <div class="card">
+    <h2>8. Changes to these terms</h2>
+    <p>We may update these terms from time to time. Continued use of the Service after a change
+    means you accept the updated terms. Material changes will be flagged on the site.</p>
+  </div>
+
+  <div class="card">
+    <h2>9. Contact</h2>
+    <p>Questions about these terms can be sent to the contact details shown on the Service.</p>
+  </div>
+</div>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Last Wicket Standing — Privacy Policy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch-950:#0A0A0A; --pitch-900:#121212; --pitch-800:#241C14; --pitch-line:#4A3A2F;
+    --chalk:#FFFFFF; --chalk-dim:#C4B7AE; --floodlight:#FFD700; --floodlight-dim:#B8960A;
+    --brass:#22C55E; --danger:#E0796B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 600px at 50% -10%, rgba(255,215,0,0.08), transparent 60%),
+      linear-gradient(180deg, var(--pitch-950), var(--pitch-900) 40%, var(--pitch-950));
+    color:var(--chalk); font-family:'Inter Tight', Georgia, serif; font-weight:700; min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 80px;}
+  h1{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:clamp(26px,5vw,38px);letter-spacing:-0.01em;margin:8px 0 6px;text-transform:uppercase;color:var(--floodlight);}
+  .updated{color:var(--chalk-dim);font-size:13px;margin-bottom:26px;}
+  .powered{font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+  .back{color:var(--floodlight);text-decoration:none;font-size:13px;text-transform:uppercase;letter-spacing:.04em;}
+  .back:hover{text-decoration:underline;}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));border:1px solid var(--pitch-line);border-radius:10px;padding:22px 24px;margin-bottom:16px;}
+  .card h2{font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.03em;font-size:15px;color:var(--floodlight);margin:0 0 12px;}
+  .card p, .card li{color:var(--chalk-dim);font-size:14px;line-height:1.65;font-weight:400;}
+  .card p{margin:0 0 10px;}
+  .card ul{margin:0 0 10px;padding-left:20px;}
+  .card li{margin-bottom:6px;}
+  strong{color:var(--chalk);font-weight:700;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+  th{text-align:left;color:var(--floodlight);font-weight:700;padding:8px 6px;border-bottom:1px solid var(--pitch-line);text-transform:uppercase;font-size:11px;letter-spacing:.04em;}
+  td{padding:9px 6px;border-bottom:1px solid rgba(74,58,47,0.4);color:var(--chalk-dim);font-weight:400;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="powered">Powered by Anticiplay</div>
+  <a class="back" href="lastwicketstanding.html">&larr; Back to Last Wicket Standing</a>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: August 2026</div>
+
+  <div class="card">
+    <h2>1. What this policy covers</h2>
+    <p>This policy explains what personal data Last Wicket Standing collects when you use the
+    Service, why we collect it, how long we keep it, and what rights you have over it.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Data we collect</h2>
+    <table>
+      <tr><th>Data</th><th>Why we collect it</th></tr>
+      <tr><td>Account details (name, email)</td><td>To create and manage your account, and contact you about the Service</td></tr>
+      <tr><td>Picks and game activity</td><td>To run the game, calculate results, and settle rounds</td></tr>
+      <tr><td>League membership and admin PIN</td><td>To manage league standings, access, and results entry</td></tr>
+      <tr><td>Technical data (device, browser, rough location)</td><td>To keep the Service secure and diagnose problems</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>3. How we store your data</h2>
+    <p>Account and game data is stored using Supabase, our database provider. Data is transmitted
+    and stored securely. We keep account data for as long as your account is active, and for a
+    reasonable period afterward to resolve disputes or meet legal obligations.</p>
+  </div>
+
+  <div class="card">
+    <h2>4. Who we share data with</h2>
+    <ul>
+      <li><strong>Supabase</strong> — our database and backend provider, which stores account and
+      game data on our behalf.</li>
+      <li>We do not sell your personal data to third parties.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>5. Your rights</h2>
+    <p>Depending on where you're based, you may have the right to:</p>
+    <ul>
+      <li>Ask what personal data we hold about you</li>
+      <li>Ask us to correct inaccurate data</li>
+      <li>Ask us to delete your data (subject to any legal reason we may need to keep it)</li>
+      <li>Ask us to export your data in a portable format</li>
+    </ul>
+    <p>To make any of these requests, contact us using the details on the Service. We'll respond
+    within a reasonable time.</p>
+  </div>
+
+  <div class="card">
+    <h2>6. Children's data</h2>
+    <p>The Service is not directed at children under 16. If we learn that we've collected personal
+    data from a child under 16 without appropriate consent, we will delete it.</p>
+  </div>
+
+  <div class="card">
+    <h2>7. International users</h2>
+    <p>We serve users in the UAE and elsewhere. Where required, we take reasonable steps to ensure
+    data transferred internationally is protected to a standard consistent with this policy.</p>
+  </div>
+
+  <div class="card">
+    <h2>8. Changes to this policy</h2>
+    <p>We may update this policy from time to time. We'll post the updated version here with a new
+    "last updated" date.</p>
+  </div>
+
+  <div class="card">
+    <h2>9. Contact</h2>
+    <p>For any privacy question or request, use the contact details shown on the Service.</p>
+  </div>
+</div>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
 <title>Last Wicket Standing — Anticiplay</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -270,6 +621,9 @@ function renderJoin(err){
   html += '<div class="field full"><label>League name</label><input type="text" id="newName" placeholder="e.g. Desert Vipers Last Wicket Standing"></div>';
   html += '<div class="field full"><label>Admin PIN (4 digits)</label><input type="text" id="newPin" maxlength="4" placeholder="e.g. 1234"></div>';
   html += '</div><button class="btn-primary" style="margin-top:14px;" onclick="createLeague()">Create League</button></div>';
+  html += '<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--pitch-line);font-size:13px;text-transform:uppercase;letter-spacing:.04em;">';
+  html += '<a class="link" href="rules.html">How It Works</a> · <a class="link" href="fixtures.html">Fixtures</a> · <a class="link" href="terms.html">Terms</a> · <a class="link" href="privacy.html">Privacy</a>';
+  html += '</div>';
   return '<div>'+html+'</div>';
 }
 async function createLeague(){
@@ -342,6 +696,10 @@ function renderLeague(){
     html += '<tr><td>'+esc(s.name)+'</td><td><span class="status '+(s.alive?'alive':'out')+'">'+(s.alive?'Still In':'Out ('+roundLabel(s.eliminatedAtRound)+')')+'</span></td><td>'+esc(hist)+'</td></tr>';
   });
   html += '</tbody></table></div></div>';
+
+  html += '<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--pitch-line);font-size:13px;text-transform:uppercase;letter-spacing:.04em;">';
+  html += '<a class="link" href="rules.html">How It Works</a> · <a class="link" href="fixtures.html">Fixtures</a> · <a class="link" href="terms.html">Terms</a> · <a class="link" href="privacy.html">Privacy</a>';
+  html += '</div>';
 
   return html;
 }
@@ -544,5 +902,94 @@ async function deleteLeague(){
 
 render();
 </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Last Wicket Standing — Rules</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch-950:#0A0A0A; --pitch-900:#121212; --pitch-800:#241C14; --pitch-line:#4A3A2F;
+    --chalk:#FFFFFF; --chalk-dim:#C4B7AE; --floodlight:#FFD700; --floodlight-dim:#B8960A;
+    --brass:#22C55E; --danger:#E0796B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 600px at 50% -10%, rgba(255,215,0,0.08), transparent 60%),
+      linear-gradient(180deg, var(--pitch-950), var(--pitch-900) 40%, var(--pitch-950));
+    color:var(--chalk); font-family:'Inter Tight', Georgia, serif; font-weight:700; min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 80px;}
+  h1{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:clamp(26px,5vw,38px);letter-spacing:-0.01em;margin:8px 0 6px;text-transform:uppercase;color:var(--floodlight);}
+  .powered{font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+  .back{color:var(--floodlight);text-decoration:none;font-size:13px;text-transform:uppercase;letter-spacing:.04em;}
+  .back:hover{text-decoration:underline;}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));border:1px solid var(--pitch-line);border-radius:10px;padding:22px 24px;margin-bottom:16px;}
+  .card h2{font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.03em;font-size:15px;color:var(--floodlight);margin:0 0 12px;}
+  .card p, .card li{color:var(--chalk-dim);font-size:14px;line-height:1.65;font-weight:400;}
+  .card p{margin:0 0 10px;}
+  .card ul{margin:0 0 10px;padding-left:20px;}
+  .card li{margin-bottom:6px;}
+  strong{color:var(--chalk);font-weight:700;}
+  .step-row{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px;}
+  .step-num{background:var(--pitch-800);border:1px solid var(--floodlight-dim);color:var(--floodlight);border-radius:50%;width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Inter Tight',sans-serif;font-size:14px;}
+  .bracket-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .bracket-pill{background:var(--pitch-800);border:1px solid var(--pitch-line);border-radius:8px;padding:8px 12px;font-family:'Inter Tight',sans-serif;font-size:12px;color:var(--chalk-dim);flex:1;min-width:140px;}
+  .bracket-pill strong{display:block;color:var(--floodlight);font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="powered">Powered by Anticiplay</div>
+  <a class="back" href="lastwicketstanding.html">&larr; Back to Last Wicket Standing</a>
+  <h1>How It Works</h1>
+
+  <div class="card">
+    <h2>The basics</h2>
+    <div class="step-row"><div class="step-num">1</div><p style="margin:0;">Each round, pick one of the six ILT20 teams that you think will win their match.</p></div>
+    <div class="step-row"><div class="step-num">2</div><p style="margin:0;">Your team loses — you're out for the season. Your team wins — you go through to the next round.</p></div>
+    <div class="step-row"><div class="step-num">3</div><p style="margin:0;"><strong>Every team must be picked once before any team can be picked a second time.</strong> No team can ever be used more than twice across the whole season.</p></div>
+    <div class="step-row"><div class="step-num">4</div><p style="margin:0;">Survive the 10-round league stage, then the playoffs, and you're the last one standing.</p></div>
+  </div>
+
+  <div class="card">
+    <h2>Why the "pick every team once" rule?</h2>
+    <p>With only six teams in the ILT20, it would be easy to just pick the strongest side every single round. The rule forces everyone through all six teams once before any repeats — so no single "safe" pick can carry you through the whole season. It's what keeps a real prize genuinely hard to win, not just a formality.</p>
+  </div>
+
+  <div class="card">
+    <h2>The league stage — Rounds 1 to 10</h2>
+    <p>Every team plays every other team twice across 10 rounds (a double round-robin), with 3 matches happening each round. Your first 6 picks must be 6 different teams. From Round 7 onward, you can start repeating a team you've already used once — but never a third time.</p>
+  </div>
+
+  <div class="card">
+    <h2>The playoffs — Rounds 11 to 14</h2>
+    <p>The top 4 teams from the league stage go through to a knockout playoff bracket. Anyone still alive after the league stage keeps picking, one team per match, right through to the Final:</p>
+    <div class="bracket-row">
+      <div class="bracket-pill"><strong>Qualifier 1</strong>1st place v 2nd place. Winner goes straight to the Final. Loser gets a second chance.</div>
+      <div class="bracket-pill"><strong>Eliminator</strong>3rd place v 4th place. Loser is knocked out of the tournament entirely.</div>
+      <div class="bracket-pill"><strong>Qualifier 2</strong>Loser of Qualifier 1 v winner of the Eliminator. Winner goes to the Final.</div>
+      <div class="bracket-pill"><strong>Final</strong>Winner of Qualifier 1 v winner of Qualifier 2. Winner takes the title.</div>
+    </div>
+    <p style="margin-top:12px;">Picks in the playoffs are fresh — no restriction on repeating a team here, since a team can legitimately appear in more than one playoff match.</p>
+  </div>
+
+  <div class="card">
+    <h2>Winning</h2>
+    <p>The last player (or players, if more than one survives to the same point) still standing wins. If everyone remaining is knocked out in the same round — a clean sweep with nobody left — there's no winner that season, and the whole league rolls straight over into a fresh season with everyone back in.</p>
+  </div>
+
+  <div class="card">
+    <h2>Free to play</h2>
+    <p>Entry is completely free. Where a prize is offered, it's provided by the league's sponsor — never funded by anyone's entry. See the <a class="back" href="terms.html">Terms &amp; Conditions</a> for details.</p>
+  </div>
+</div>
 </body>
 </html>
