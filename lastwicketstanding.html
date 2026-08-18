@@ -295,7 +295,7 @@ function currentOpenRound(league){
 /* ---------- Rendering ---------- */
 function setTab(tab){ state.tab = tab; render(); }
 function renderNav(){
-  const tabs = [['home','Home'],['myleague','My League'],['fixtures','Fixtures'],['rules','How It Works'],['contact','Contact'],['siteadmin','Site Admin']];
+  const tabs = [['home','Home'],['myleague','My League'],['leaguetable','League Table'],['fixtures','Fixtures'],['rules','How It Works'],['contact','Contact'],['siteadmin','Site Admin']];
   let html = '<nav class="main-nav">';
   tabs.forEach(([key,label])=>{
     html += '<button class="'+(state.tab===key?'active':'')+'" onclick="setTab(\''+key+'\')">'+label+'</button>';
@@ -326,6 +326,13 @@ async function render(){
       if(!state.league){ state.league = await loadLeague(state.code); }
       if(!state.league){ body = '<div class="card"><h3>My League</h3><p class="note" style="margin-top:0;">Couldn\'t find that league. Head to Home and rejoin.</p></div>'; }
       else body = renderMyLeagueTab();
+    }
+  } else if(state.tab==='leaguetable'){
+    if(!state.code){ body = '<div class="card"><h3>League Table</h3><p class="note" style="margin-top:0;">Join or create a league on the Home tab first — the table and playoffs show once you\'re in one.</p></div>'; }
+    else {
+      if(!state.league){ state.league = await loadLeague(state.code); }
+      if(!state.league){ body = '<div class="card"><h3>League Table</h3><p class="note" style="margin-top:0;">Couldn\'t find that league. Head to Home and rejoin.</p></div>'; }
+      else body = renderLeagueTableTab();
     }
   } else {
     if(!state.code){ body = renderJoin(); }
@@ -367,6 +374,43 @@ function renderLeagueTableCard(league){
   html += '</div>';
   return html;
 }
+function renderPlayoffBracketCard(league){
+  const stages = [11,12,13,14];
+  let html = '<div class="card"><h3>Playoffs</h3>';
+  html += '<p class="note" style="margin-top:0;">Top 4 teams from the league table above. Qualifier 1 winner goes straight to the Final; the loser gets a second chance in Qualifier 2.</p>';
+  stages.forEach(r=>{
+    const pair = playoffPair(league, r);
+    const winner = league.playoffWinners ? league.playoffWinners[r] : null;
+    html += '<div style="margin:18px 0;">';
+    html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:12px;color:var(--floodlight);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;">'+roundLabel(r)+'</p>';
+    if(!pair){
+      html += '<div class="fixture-row" style="border-bottom:none;opacity:.5;">'
+        + '<div class="badge-box">?</div><span class="team-name">TBD</span><span class="vs">v</span><div class="badge-box">?</div><span class="team-name">TBD</span>'
+        + '</div>'
+        + '<p class="note" style="margin:4px 0 0;">Not yet determined \u2014 waiting on earlier results.</p>';
+    } else {
+      html += '<div class="fixture-row" style="border-bottom:none;">'
+        + '<div class="badge-box">'+kitSVG(pair[0])+'</div>'
+        + '<span class="team-name" style="'+(winner===pair[0]?'color:var(--floodlight);':'')+'">'+esc(team(pair[0]).short)+(winner===pair[0]?' \u2713':'')+'</span>'
+        + '<span class="vs">v</span>'
+        + '<div class="badge-box">'+kitSVG(pair[1])+'</div>'
+        + '<span class="team-name" style="'+(winner===pair[1]?'color:var(--floodlight);':'')+'">'+esc(team(pair[1]).short)+(winner===pair[1]?' \u2713':'')+'</span>'
+        + '</div>';
+      if(winner==null) html += '<p class="note" style="margin:4px 0 0;">Result not yet entered by admin.</p>';
+    }
+    html += '</div>';
+  });
+  const champion = league.playoffWinners ? league.playoffWinners[14] : null;
+  if(champion!=null){
+    html += '<div class="result-strip"><div><div class="result-label">Champion</div><div class="result-points">'+esc(team(champion).name)+'</div></div></div>';
+  }
+  html += '</div>';
+  return html;
+}
+function renderLeagueTableTab(){
+  const league = state.league;
+  return renderLeagueTableCard(league) + renderPlayoffBracketCard(league);
+}
 function renderMyLeagueTab(){
   const league = state.league;
   const standings = computePlayerStandings(league);
@@ -374,8 +418,7 @@ function renderMyLeagueTab(){
   const round = currentOpenRound(league);
   const usedCounts = me ? me.usedCounts : {0:0,1:0,2:0,3:0,4:0,5:0};
 
-  let html = renderLeagueTableCard(league);
-  html += '<div class="card"><h3>'+esc(league.name)+' \u2014 My League</h3>';
+  let html = '<div class="card"><h3>'+esc(league.name)+' \u2014 My League</h3>';
   if(!me){
     html += '<p class="note" style="margin-top:0;">You haven\'t joined this league as a player yet \u2014 join on the Home tab to track your own picks here. Showing the season schedule below either way.</p>';
   }
