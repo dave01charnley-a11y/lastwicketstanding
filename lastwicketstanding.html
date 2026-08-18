@@ -396,19 +396,19 @@ function renderMyLeagueTab(){
   html += '<p class="note" style="margin-top:6px;">Rounds 1\u20136: every team must be picked once. From Round 7, you can repeat a team you\u2019ve already used \u2014 that\u2019s the reset.</p>';
 
   html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--chalk-dim);margin:20px 0 10px;">Your Six Teams</p>';
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;">';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">';
   TEAMS.forEach(t=>{
     const used = usedCounts[t.id]||0;
     const nextFx = nextFixtureForTeam(t.id, round);
     const exhausted = used>=2;
-    html += '<div title="Next fixture: '+esc(nextFx)+'" style="background:var(--pitch-950);border:1px solid '+(exhausted?'var(--pitch-line)':'var(--floodlight-dim)')+';border-radius:8px;padding:12px 8px;text-align:center;'+(exhausted?'opacity:.45;':'')+'">'
+    html += '<div style="background:var(--pitch-950);border:1px solid '+(exhausted?'var(--pitch-line)':'var(--floodlight-dim)')+';border-radius:8px;padding:12px 8px;text-align:center;'+(exhausted?'opacity:.45;':'')+'">'
       + '<div style="display:flex;justify-content:center;margin-bottom:8px;">'+kitSVG(t.id)+'</div>'
       + '<div class="team-name" style="font-size:12px;margin-bottom:4px;">'+esc(t.short)+'</div>'
-      + '<div style="font-family:\'Inter Tight\',monospace;font-size:11px;color:'+(exhausted?'var(--danger)':'var(--floodlight)')+';">'+used+'/2 used</div>'
+      + '<div style="font-family:\'Inter Tight\',monospace;font-size:11px;color:'+(exhausted?'var(--danger)':'var(--floodlight)')+';margin-bottom:6px;">'+used+'/2 used</div>'
+      + '<div class="note" style="margin:0;font-size:11px;line-height:1.4;">Next: '+esc(nextFx)+'</div>'
       + '</div>';
   });
   html += '</div>';
-  html += '<p class="note" style="margin-top:14px;">Hover over a team to see its next scheduled fixture.</p>';
   html += '</div>';
   return html;
 }
