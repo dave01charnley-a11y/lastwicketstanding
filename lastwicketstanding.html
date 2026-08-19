@@ -797,6 +797,13 @@ function renderAdmin(league, round){
   }
   html += '<p style="margin:-8px 0 12px;"><a class="link" href="#" onclick="state.adminUnlocked=false;render();return false;">Log out of admin</a></p>';
 
+  html += '<div style="border-top:1px solid var(--pitch-line);margin-bottom:16px;padding-top:14px;">'
+    + '<label style="display:block;font-family:\'Inter Tight\',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--chalk-dim);margin-bottom:6px;">League Name</label>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    +   '<input type="text" id="renameLeagueInput" value="'+esc(league.name)+'" style="flex:1;min-width:180px;">'
+    +   '<button class="btn-secondary" id="renameLeagueBtn" onclick="renameLeague()">Save Name</button>'
+    + '</div></div>';
+
   if(round>14){
     html += '<p class="note" style="margin-top:0;">Tournament complete.</p></div>';
     return html;
@@ -845,6 +852,15 @@ function renderManagePlayers(league){
   }
   html += '</div>';
   return html;
+}
+async function renameLeague(){
+  const val = document.getElementById('renameLeagueInput').value.trim();
+  if(!val){ alert('League name can\'t be empty.'); return; }
+  state.league.name = val;
+  const btn = document.getElementById('renameLeagueBtn');
+  if(btn) btn.textContent = 'Saving…';
+  await saveLeague(state.league);
+  render();
 }
 function checkAdminPin(){
   const val = document.getElementById('adminPinInput').value.trim();
