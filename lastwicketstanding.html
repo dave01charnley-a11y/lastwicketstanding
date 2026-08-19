@@ -330,6 +330,7 @@ async function render(){
     + renderNav();
   let body;
   if(state.tab==='fixtures'){
+    if(state.code && !state.league){ state.league = await loadLeague(state.code); }
     body = renderFixturesTab();
   } else if(state.tab==='rules'){
     body = renderRulesTab();
@@ -426,7 +427,7 @@ function renderPlayoffBracketCard(league){
 }
 function renderLeagueTableTab(){
   const league = state.league;
-  return renderLeagueTableCard(league) + renderPlayoffBracketCard(league);
+  return renderLeagueTableCard(league);
 }
 function renderMyLeagueTab(){
   const league = state.league;
@@ -595,11 +596,16 @@ function renderFixturesTab(){
     fixturesForRound(r).forEach(([a,b])=>{ html += fixtureRowHTML(a,b); });
     html += '</div>';
   }
-  html += '<div class="card"><h3>Playoffs</h3>';
-  playoffs.forEach(p=>{
-    html += '<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-family:\'Inter Tight\',sans-serif;font-size:13px;color:var(--chalk);">'+p.label+'</span><span class="note" style="margin:0;">'+p.date+'</span></div><p class="note" style="margin:2px 0 0;">'+p.note+'</p></div>';
-  });
-  html += '</div>';
+  if(state.league){
+    html += renderPlayoffBracketCard(state.league);
+  } else {
+    html += '<div class="card"><h3>Playoffs</h3>';
+    playoffs.forEach(p=>{
+      html += '<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-family:\'Inter Tight\',sans-serif;font-size:13px;color:var(--chalk);">'+p.label+'</span><span class="note" style="margin:0;">'+p.date+'</span></div><p class="note" style="margin:2px 0 0;">'+p.note+'</p></div>';
+    });
+    html += '<p class="note" style="margin-top:10px;">Join or create a league to see the live bracket with real teams once the league stage is underway.</p>';
+    html += '</div>';
+  }
   return html;
 }
 function renderJoin(err){
