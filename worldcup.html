@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Last Wicket Standing — World Cup 2027 — Anticiplay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --pitch-950:#0A0A0A;
+    --pitch-900:#121212;
+    --pitch-800:#241C14;
+    --pitch-line:#4A3A2F;
+    --chalk:#FFFFFF;
+    --chalk-dim:#C4B7AE;
+    --floodlight:#FFD700;
+    --floodlight-dim:#B8960A;
+    --brass:#22C55E;
+    --danger:#E0796B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(255,215,0,0.08), transparent 60%),
+      linear-gradient(180deg, var(--pitch-950), var(--pitch-900) 40%, var(--pitch-950));
+    color:var(--chalk);
+    font-family:'Inter Tight', Georgia, serif;
+    font-weight:700;
+    min-height:100vh;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:28px 20px 80px;}
+  h1{
+    font-family:'Inter Tight',sans-serif;font-weight:700;font-size:clamp(26px,6vw,38px);
+    letter-spacing:-0.01em;margin:8px 0 6px;text-transform:uppercase;
+  }
+  .sub{color:var(--chalk-dim);font-size:14px;max-width:600px;line-height:1.5;margin-bottom:22px;}
+  .powered{font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border:1px solid var(--pitch-line);border-radius:10px;padding:22px 24px;margin-bottom:18px;
+  }
+  .card h3{font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.03em;font-size:15px;color:var(--floodlight);margin:0 0 14px;}
+  .card h4{font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.03em;font-size:12px;color:var(--chalk);margin:16px 0 8px;}
+  .note{color:var(--chalk-dim);font-size:13px;line-height:1.6;margin-top:6px;}
+  table{width:100%;border-collapse:collapse;font-family:'Inter Tight',monospace;font-size:13px;}
+  th{text-align:left;color:var(--chalk-dim);font-weight:700;padding:8px 6px;border-bottom:1px solid var(--pitch-line);text-transform:uppercase;font-size:11px;letter-spacing:.05em;}
+  td{padding:9px 6px;border-bottom:1px solid rgba(74,58,47,0.4);}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-family:'Inter Tight',monospace;font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.04em;}
+  .field input, .field select{
+    background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;
+    color:var(--chalk);padding:10px 12px;font-family:'Inter Tight',serif;font-size:14px;width:100%;
+  }
+  .field input:focus, .field select:focus{outline:1px solid var(--floodlight);}
+  .btn-primary{
+    font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-weight:700;font-size:14px;
+    background:var(--floodlight);color:var(--pitch-950);border:none;border-radius:6px;
+    padding:13px 22px;cursor:pointer;grid-column:1/-1;margin-top:4px;width:100%;
+  }
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-secondary{
+    font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-weight:700;font-size:12px;
+    background:none;color:var(--floodlight);border:1px solid var(--floodlight-dim);border-radius:6px;
+    padding:8px 14px;cursor:pointer;
+  }
+  .status{display:inline-block;font-family:'Inter Tight',monospace;font-size:11px;text-transform:uppercase;padding:3px 9px;border-radius:4px;letter-spacing:.03em;}
+  .status.alive{background:rgba(255,215,0,0.22);color:var(--chalk);}
+  .status.out{background:rgba(224,121,107,0.2);color:var(--danger);}
+  .status.champ{background:rgba(34,197,94,0.28);color:var(--chalk);}
+  .lms-status-strip{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:18px;padding:14px 18px;background:var(--pitch-800);border-radius:10px;border:1px solid var(--pitch-line);}
+  .lms-status-item{display:flex;flex-direction:column;gap:2px;}
+  .lms-status-item .num{font-family:'Inter Tight',serif;font-size:22px;font-weight:700;color:var(--floodlight);}
+  .lms-status-item .lbl{font-family:'Inter Tight',sans-serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--chalk-dim);}
+  .team-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:2px solid var(--pitch-line);background:var(--pitch-800);cursor:pointer;}
+  .team-chip .crest{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;}
+  .team-chip.selected{border-color:var(--floodlight);background:var(--pitch-900);}
+  .team-chip.used{opacity:.35;cursor:not-allowed;pointer-events:none;filter:grayscale(1);}
+  .team-name{font-family:'Inter Tight',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.02em;}
+  .fixture-row{display:grid;grid-template-columns:38px 122px 22px 38px 1fr;align-items:center;column-gap:12px;font-family:'Inter Tight',sans-serif;font-size:13px;padding:10px 0;border-bottom:1px solid rgba(74,58,47,0.35);}
+  .fixture-row:last-child{border-bottom:none;}
+  .badge-box{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;flex-shrink:0;}
+  .badge-box img{max-width:80%;max-height:80%;object-fit:contain;display:block;}
+  .vs{text-align:center;color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  .admin-match-row{background:var(--pitch-800);border:1px solid var(--pitch-line);border-radius:8px;padding:14px;margin-bottom:12px;}
+  .admin-match-row .teams-line{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:12px;}
+  .admin-match-row .team-side{display:flex;align-items:center;gap:8px;}
+  .admin-match-row .team-side.right{justify-content:flex-end;}
+  .admin-match-row .buttons-line{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .admin-match-row .win-btn{width:100%;text-align:center;padding:10px 8px;}
+  .result-strip{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(90deg, rgba(255,215,0,0.10), transparent);border:1px solid var(--floodlight-dim);border-radius:8px;padding:16px 20px;margin-top:8px;}
+  .result-label{font-family:'Inter Tight',sans-serif;text-transform:uppercase;font-size:13px;color:var(--chalk-dim);letter-spacing:.03em;}
+  .result-points{font-family:'Inter Tight',monospace;font-size:22px;font-weight:700;color:var(--floodlight);letter-spacing:.04em;}
+  .code-pill{font-family:'Inter Tight',monospace;background:var(--pitch-950);border:1px solid var(--floodlight-dim);color:var(--floodlight);padding:3px 10px;border-radius:6px;font-size:13px;letter-spacing:.05em;}
+  .link{color:var(--floodlight);text-decoration:none;}
+  .link:hover{text-decoration:underline;}
+  .win-btn{font-family:'Inter Tight',monospace;font-size:12px;font-weight:700;padding:8px 12px;border-radius:6px;cursor:pointer;border:1px solid var(--pitch-line);background:var(--pitch-950);color:var(--chalk-dim);}
+  .win-btn.active{background:rgba(255,215,0,0.22);color:var(--chalk);border-color:var(--floodlight);}
+  .badge-pill{display:inline-block;font-family:'Inter Tight',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:4px 9px;border-radius:12px;margin:0 6px 6px 0;background:var(--pitch-950);border:1px solid var(--floodlight-dim);color:var(--floodlight);}
+  .badge-pill.dim{color:var(--chalk-dim);border-color:var(--pitch-line);}
+  .phase-strip{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
+  .phase-pill{font-family:'Inter Tight',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:6px 10px;border-radius:14px;border:1px solid var(--pitch-line);background:var(--pitch-950);color:var(--chalk-dim);}
+  .phase-pill.done{background:var(--pitch-800);color:var(--chalk);}
+  .phase-pill.current{background:var(--floodlight);color:var(--pitch-950);border-color:var(--floodlight);}
+  nav.main-nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 22px;border-bottom:1px solid var(--pitch-line);padding-bottom:12px;}
+  nav.main-nav button{
+    font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-weight:700;font-size:12px;
+    background:none;border:1px solid var(--pitch-line);color:var(--chalk-dim);padding:8px 16px;border-radius:20px;cursor:pointer;
+  }
+  nav.main-nav button.active{background:var(--floodlight);color:var(--pitch-950);border-color:var(--floodlight);}
+  .footer-links{text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--pitch-line);font-size:12px;text-transform:uppercase;letter-spacing:.04em;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ---------- Supabase client ---------- */
+const SUPABASE_URL = 'https://plpevtpsjmmbobdxotmr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable__8Eb_FMqLioU0gBn38AkXQ_b6F_zO2r';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const TABLE = 'lws_wc2027_leagues';
+
+/* ============================================================
+   TEAMS — proxy "current top 12" ICC ODI nations (31 Aug 2026),
+   seeded into two World-Cup-style groups of six. NOTE: the real
+   2027 World Cup field of 14 (and its bottom 4 seats) isn't
+   finalised until the Feb/Mar 2027 Qualifiers — this is a
+   stand-in roster for Round 2 onward, as requested.
+   ============================================================ */
+const TEAMS = [
+  {id:0,  name:'India',          short:'IND', kit:{shirt:'#1B3F8B', sleeve:'#FF9933', trim:'#FF9933', shorts:'#1B3F8B'}},
+  {id:1,  name:'New Zealand',    short:'NZ',  kit:{shirt:'#101820', sleeve:'#C0C0C0', trim:'#C0C0C0', shorts:'#101820'}},
+  {id:2,  name:'Australia',      short:'AUS', kit:{shirt:'#FFD200', sleeve:'#006A4E', trim:'#006A4E', shorts:'#006A4E'}},
+  {id:3,  name:'South Africa',   short:'SA',  kit:{shirt:'#007A3D', sleeve:'#FFB81C', trim:'#FFB81C', shorts:'#000000'}},
+  {id:4,  name:'Pakistan',       short:'PAK', kit:{shirt:'#0B6623', sleeve:'#FFFFFF', trim:'#FFFFFF', shorts:'#0B6623'}},
+  {id:5,  name:'Sri Lanka',      short:'SL',  kit:{shirt:'#0033A0', sleeve:'#FDB913', trim:'#8A1538', shorts:'#0033A0'}},
+  {id:6,  name:'England',        short:'ENG', kit:{shirt:'#0C2340', sleeve:'#C8102E', trim:'#C8102E', shorts:'#0C2340'}},
+  {id:7,  name:'Afghanistan',    short:'AFG', kit:{shirt:'#4AA3DF', sleeve:'#D32011', trim:'#000000', shorts:'#0C2340'}},
+  {id:8,  name:'Bangladesh',     short:'BAN', kit:{shirt:'#006A4E', sleeve:'#F42A41', trim:'#F42A41', shorts:'#006A4E'}},
+  {id:9,  name:'West Indies',    short:'WI',  kit:{shirt:'#7B1113', sleeve:'#FFC72C', trim:'#FFC72C', shorts:'#000000'}},
+  {id:10, name:'Zimbabwe',       short:'ZIM', kit:{shirt:'#D40000', sleeve:'#FFD200', trim:'#006A4E', shorts:'#000000'}},
+  {id:11, name:'Ireland',        short:'IRE', kit:{shirt:'#169B62', sleeve:'#FF883E', trim:'#FFFFFF', shorts:'#169B62'}}
+];
+const GROUP_A = [0,3,4,7,8,11];   // India, South Africa, Pakistan, Afghanistan, Bangladesh, Ireland
+const GROUP_B = [1,2,5,6,9,10];   // New Zealand, Australia, Sri Lanka, England, West Indies, Zimbabwe
+
+function team(id){ return TEAMS[id]; }
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- Circle-method round robin (handles odd counts with a bye) ---------- */
+function roundRobin(ids){
+  let arr = ids.slice();
+  if(arr.length % 2 === 1) arr.push(null);
+  const n = arr.length;
+  const rounds = [];
+  for(let r=0;r<n-1;r++){
+    const matches = [];
+    for(let i=0;i<n/2;i++){
+      const a = arr[i], b = arr[n-1-i];
+      if(a!=null && b!=null) matches.push([a,b]);
+    }
+    rounds.push(matches);
+    arr = [arr[0]].concat([arr[n-1]]).concat(arr.slice(1, n-1));
+  }
+  return rounds;
+}
+
+const GROUP_A_ROUNDS = roundRobin(GROUP_A); // 5 rounds x 3 matches
+const GROUP_B_ROUNDS = roundRobin(GROUP_B); // 5 rounds x 3 matches
+/* Combined Round-2 "gameweeks": each of the 5 rounds has all 12 teams in
+   action across 6 matches (3 from Group A + 3 from Group B) — 30 matches total. */
+function groupFixturesForRound(r){ // r = 1..5
+  return GROUP_A_ROUNDS[r-1].concat(GROUP_B_ROUNDS[r-1]);
+}
+
+function kitSVG(id){
+  const t = team(id);
+  const k = t.kit;
+  const outline = 'rgba(255,255,255,0.22)';
+  return '<svg viewBox="0 0 100 110" style="width:32px;height:32px;display:block;flex-shrink:0;">'
+    + '<path d="M50 8 L62 16 Q72 20 76 30 L82 46 Q84 50 80 53 L68 58 Q64 50 60 42 L62 88 Q62 94 56 94 L44 94 Q38 94 38 88 L40 42 Q36 50 32 58 L20 53 Q16 50 18 46 L24 30 Q28 20 38 16 Z" fill="'+k.shirt+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<path d="M62 16 Q72 20 76 30 L82 46 Q84 50 80 53 L68 58 Q64 50 60 42 L60 30 Z" fill="'+k.sleeve+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<path d="M38 16 Q28 20 24 30 L18 46 Q16 50 20 53 L32 58 Q36 50 40 42 L40 30 Z" fill="'+k.sleeve+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<path d="M42 10 L50 18 L58 10" stroke="'+k.trim+'" stroke-width="3" fill="none" stroke-linecap="round"/>'
+    + '<rect x="38" y="88" width="24" height="16" rx="2" fill="'+k.shorts+'" stroke="'+outline+'" stroke-width="1.2"/>'
+    + '<rect x="38" y="88" width="24" height="3" fill="'+k.trim+'"/>'
+    + '</svg>';
+}
+
+/* ---------- App state ---------- */
+const SITE_ADMIN_PASSWORD = 'lws-admin-2026';
+const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null, tiebreakGuess: '', tab: 'home', siteAdminUnlocked: false, allLeagues: null };
+const params = new URLSearchParams(window.location.search);
+if(params.get('code')) state.code = params.get('code').toUpperCase();
+
+/* ---------- Data access ---------- */
+async function loadLeague(code){
+  const { data, error } = await sb.from(TABLE).select('*').eq('code', code).maybeSingle();
+  if(error || !data) return null;
+  return data.data;
+}
+async function saveLeague(league){
+  await sb.from(TABLE).upsert({ code: league.code, data: league, updated_at: new Date().toISOString() });
+}
+async function loadAllLeagues(){
+  const { data, error } = await sb.from(TABLE).select('*').order('updated_at', { ascending: false });
+  if(error || !data) return [];
+  return data.map(row => row.data);
+}
+async function deleteLeagueByCode(code){
+  await sb.from(TABLE).delete().eq('code', code);
+}
+function genCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for(let i=0;i<5;i++) c += chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+function leagueShareLink(code){
+  return window.location.origin + window.location.pathname + '?code=' + code;
+}
+async function copyText(text, btnId){
+  try{ await navigator.clipboard.writeText(text); }
+  catch(e){ alert('Couldn\'t copy automatically — here\'s the link:\n\n' + text); return; }
+  const btn = document.getElementById(btnId);
+  if(btn){ const orig = btn.textContent; btn.textContent = 'Copied!'; setTimeout(()=>{ if(document.getElementById(btnId)) document.getElementById(btnId).textContent = orig; }, 1500); }
+}
+
+/* ============================================================
+   GAME LOGIC — three stages before the knockouts:
+   Rounds 1–5   Group Stage   (2 groups of 6, 30 matches)
+   Rounds 6–12  Super 7       (7 qualifiers, single round-robin, 21 matches)
+   Round 13     Semi-Finals   (1v4, 2v3)
+   Round 14     Final
+   ============================================================ */
+function roundLabel(r){
+  if(r>=1 && r<=5) return 'Group Stage — Round '+r;
+  if(r>=6 && r<=12) return 'Super 7 — Round '+(r-5);
+  if(r===13) return 'Semi-Finals';
+  if(r===14) return 'Final';
+  return 'Complete';
+}
+
+/* Group standings: wins only (no NRR — we don't have real match data,
+   ties broken by original seed order, noted in the Rules tab). */
+function computeGroupWins(league, groupIds, groupRoundsArr, offset){
+  const wins = {}; groupIds.forEach(id=>wins[id]=0);
+  for(let r=1;r<=5;r++){
+    const results = league.groupResults && league.groupResults[r];
+    if(!results) return null;
+    groupRoundsArr[r-1].forEach((m,i)=>{
+      const w = results[offset+i];
+      if(w!=null) wins[w]++;
+    });
+  }
+  return wins;
+}
+function groupStageComplete(league){
+  for(let r=1;r<=5;r++){
+    const res = league.groupResults && league.groupResults[r];
+    if(!res || res.length<6 || res.some(x=>x==null)) return false;
+  }
+  return true;
+}
+function computeSuper7(league){
+  if(!groupStageComplete(league)) return null;
+  const winsA = computeGroupWins(league, GROUP_A, GROUP_A_ROUNDS, 0);
+  const winsB = computeGroupWins(league, GROUP_B, GROUP_B_ROUNDS, 3);
+  const sA = GROUP_A.slice().sort((a,b)=> winsA[b]-winsA[a] || a-b);
+  const sB = GROUP_B.slice().sort((a,b)=> winsB[b]-winsB[a] || a-b);
+  const fourthA = sA[3], fourthB = sB[3];
+  const bestFourth = winsB[fourthB] > winsA[fourthA] ? fourthB : fourthA;
+  const teams = [sA[0],sA[1],sA[2], sB[0],sB[1],sB[2], bestFourth];
+  return { teams, standA:sA, standB:sB, winsA, winsB, bestFourth };
+}
+function super7FixturesForRound(league, r){ // r = 6..12
+  const s7 = computeSuper7(league);
+  if(!s7) return null;
+  const rounds = roundRobin(s7.teams); // 7 rounds x 3 matches
+  return rounds[r-6];
+}
+function super7Complete(league){
+  const s7 = computeSuper7(league);
+  if(!s7) return false;
+  for(let r=6;r<=12;r++){
+    const res = league.super7Results && league.super7Results[r];
+    if(!res || res.length<3 || res.some(x=>x==null)) return false;
+  }
+  return true;
+}
+function computeSuper7Standings(league){
+  const s7 = computeSuper7(league);
+  if(!s7 || !super7Complete(league)) return null;
+  const wins = {}; s7.teams.forEach(id=>wins[id]=0);
+  for(let r=6;r<=12;r++){
+    const fx = super7FixturesForRound(league, r);
+    const res = league.super7Results[r];
+    fx.forEach((m,i)=>{ const w=res[i]; if(w!=null) wins[w]++; });
+  }
+  const standings = s7.teams.slice().sort((a,b)=> wins[b]-wins[a] || a-b);
+  return { standings, wins };
+}
+function semiPairs(league){
+  const st = computeSuper7Standings(league);
+  if(!st) return null;
+  const [s1,s2,s3,s4] = st.standings;
+  return [[s1,s4],[s2,s3]];
+}
+function semisComplete(league){
+  const sw = league.semiWinners && league.semiWinners[13];
+  return !!(sw && sw.length===2 && sw[0]!=null && sw[1]!=null);
+}
+function finalPair(league){
+  if(!semisComplete(league)) return null;
+  return league.semiWinners[13];
+}
+function finalComplete(league){
+  return !!(league.finalResult && league.finalResult.winner!=null && league.finalResult.margin!=null);
+}
+
+/* Unified fixture lookup used by pick/admin screens */
+function fixturesForRound(league, r){
+  if(r>=1 && r<=5) return groupFixturesForRound(r);
+  if(r>=6 && r<=12) return super7FixturesForRound(league, r);
+  if(r===13){ const p = semiPairs(league); return p; }
+  if(r===14){ const p = finalPair(league); return p ? [p] : null; }
+  return null;
+}
+function roundResultsComplete(league, r){
+  if(r>=1 && r<=5){ const res=league.groupResults&&league.groupResults[r]; return !!(res && res.length>=6 && res.every(x=>x!=null)); }
+  if(r>=6 && r<=12){ const res=league.super7Results&&league.super7Results[r]; return !!(res && res.length>=3 && res.every(x=>x!=null)); }
+  if(r===13) return semisComplete(league);
+  if(r===14) return finalComplete(league);
+  return false;
+}
+function currentOpenRound(league){
+  for(let r=1;r<=14;r++){ if(!roundResultsComplete(league, r)) return r; }
+  return 15;
+}
+
+/* ---------- Player standings: picks, eliminations, mulligan, badges ---------- */
+function computePlayerStandings(league){
+  return (league.players||[]).map(pl=>{
+    let eliminatedAtRound = null;
+    let mulliganUsed = false;
+    const history = [];
+    const usedGroup = {};    // teams used during rounds 1-5
+    const usedSuper7 = {};   // teams used during rounds 6-12
+    for(let r=1;r<=14;r++){
+      const pick = league.picks && league.picks[r] && league.picks[r][pl.id];
+      if(eliminatedAtRound!==null){
+        if(pick!=null) history.push({round:r, teamId:pick, result:'—'});
+        continue;
+      }
+      if(pick==null) continue;
+      if(r<=5) usedGroup[pick]=(usedGroup[pick]||0)+1;
+      else if(r<=12) usedSuper7[pick]=(usedSuper7[pick]||0)+1;
+
+      let winnerForPick = null;
+      if(r<=5){
+        const res = league.groupResults && league.groupResults[r];
+        if(!res || res.some(x=>x==null)){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
+        const fx = groupFixturesForRound(r);
+        const idx = fx.findIndex(([a,b])=>a===pick||b===pick);
+        winnerForPick = res[idx];
+      } else if(r<=12){
+        const res = league.super7Results && league.super7Results[r];
+        const fx = super7FixturesForRound(league, r);
+        if(!fx){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
+        const idx = fx.findIndex(([a,b])=>a===pick||b===pick);
+        if(idx<0 || !res || res[idx]==null){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
+        winnerForPick = res[idx];
+      } else if(r===13){
+        const pairs = semiPairs(league);
+        if(!pairs){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
+        const sw = league.semiWinners && league.semiWinners[13];
+        const idx = pairs.findIndex(([a,b])=>a===pick||b===pick);
+        if(idx<0 || !sw || sw[idx]==null){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
+        winnerForPick = sw[idx];
+      } else if(r===14){
+        if(!finalComplete(league)){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
+        winnerForPick = league.finalResult.winner;
+      }
+      const outcome = winnerForPick === pick;
+      if(outcome){
+        history.push({round:r, teamId:pick, result:'Win'});
+      } else {
+        if(r<=5 && !mulliganUsed){
+          mulliganUsed = true;
+          history.push({round:r, teamId:pick, result:'Loss (mulligan used)'});
+        } else {
+          history.push({round:r, teamId:pick, result:'Loss'});
+          eliminatedAtRound = r;
+        }
+      }
+    }
+    const finalPick = league.picks && league.picks[14] && league.picks[14][pl.id];
+    const championEligible = eliminatedAtRound===null && finalComplete(league) && finalPick!=null && finalPick===league.finalResult.winner;
+    return {
+      ...pl,
+      alive: eliminatedAtRound===null,
+      eliminatedAtRound, history, mulliganUsed, usedGroup, usedSuper7,
+      survivedGroup: eliminatedAtRound===null || eliminatedAtRound>5,
+      madeSuper7: (eliminatedAtRound===null || eliminatedAtRound>12) && groupStageComplete(league),
+      intoSemis: (eliminatedAtRound===null || eliminatedAtRound>13) && super7Complete(league),
+      championEligible
+    };
+  });
+}
+function computeChampion(league){
+  if(!finalComplete(league)) return null;
+  const standings = computePlayerStandings(league);
+  const candidates = standings.filter(s=>s.championEligible);
+  if(candidates.length===0) return { none:true };
+  if(candidates.length===1) return { player: candidates[0], tiebreak:false };
+  const guesses = league.tiebreak || {};
+  const actual = league.finalResult.margin;
+  let best = null, bestDiff = Infinity;
+  candidates.forEach(c=>{
+    const g = guesses[c.id];
+    const diff = (g==null) ? Infinity : Math.abs(g-actual);
+    if(best===null || diff < bestDiff){ bestDiff = diff; best = c; }
+  });
+  return { player: best, tiebreak:true, candidates };
+}
+function eligibleTeamsForRound(league, me, r){
+  const fx = fixturesForRound(league, r);
+  if(!fx) return [];
+  const playing = [...new Set(fx.flat())];
+  if(r<=5){
+    return playing.filter(id => !(me.usedGroup && me.usedGroup[id]));
+  } else if(r<=12){
+    return playing.filter(id => !(me.usedSuper7 && me.usedSuper7[id]));
+  }
+  return playing; // knockouts: no lock, only 2-4 teams anyway
+}
+
+/* ---------- Rendering ---------- */
+function setTab(tab){ state.tab = tab; render(); }
+function renderNav(){
+  const tabs = [['home','Home'],['myleague','My Picks'],['leaguetable','League Table'],['fixtures','Fixtures'],['rules','How It Works'],['siteadmin','Site Admin']];
+  let html = '<nav class="main-nav">';
+  tabs.forEach(([key,label])=>{
+    html += '<button class="'+(state.tab===key?'active':'')+'" onclick="setTab(\''+key+'\')">'+label+'</button>';
+  });
+  html += '</nav>';
+  return html;
+}
+function renderFooterLinks(){
+  return '<div class="footer-links"><a class="link" href="#" onclick="setTab(\'contact\');return false;">Contact</a> · <a class="link" href="terms.html">Terms</a> · <a class="link" href="privacy.html">Privacy</a></div>';
+}
+async function render(){
+  const el = document.getElementById('app');
+  let header = '<div class="powered">Anticiplay.com presents</div>'
+    + '<h1>Last Wicket Standing — World Cup 2027</h1>'
+    + '<p class="sub">Pick a team every round. Lose and you\'re out — unless it\'s your one Group Stage mulligan. Survive the Group Stage, the Super 7, and the knockouts to be crowned Last Wicket Standing.</p>'
+    + renderNav();
+  let body;
+  if(state.tab==='fixtures'){
+    if(state.code && !state.league){ state.league = await loadLeague(state.code); }
+    body = renderFixturesTab();
+  } else if(state.tab==='rules'){
+    body = renderRulesTab();
+  } else if(state.tab==='contact'){
+    body = renderContactTab();
+  } else if(state.tab==='siteadmin'){
+    body = await renderSiteAdminTab();
+  } else if(state.tab==='myleague'){
+    if(!state.code){ body = '<div class="card"><h3>My Picks</h3><p class="note" style="margin-top:0;">Join or create a league on the Home tab first.</p></div>'; }
+    else {
+      if(!state.league){ state.league = await loadLeague(state.code); }
+      if(!state.league){ body = '<div class="card"><h3>My Picks</h3><p class="note" style="margin-top:0;">Couldn\'t find that league. Head to Home and rejoin.</p></div>'; }
+      else body = renderMyLeagueTab();
+    }
+  } else if(state.tab==='leaguetable'){
+    if(!state.code){ body = '<div class="card"><h3>League Table</h3><p class="note" style="margin-top:0;">Join or create a league on the Home tab first.</p></div>'; }
+    else {
+      if(!state.league){ state.league = await loadLeague(state.code); }
+      if(!state.league){ body = '<div class="card"><h3>League Table</h3><p class="note" style="margin-top:0;">Couldn\'t find that league. Head to Home and rejoin.</p></div>'; }
+      else body = renderLeagueTableTab();
+    }
+  } else {
+    if(!state.code){ body = renderJoin(); }
+    else {
+      if(!state.league){
+        state.league = await loadLeague(state.code);
+        if(!state.league){ state.code = null; body = renderJoin('Couldn\'t find a league with that code.'); }
+      }
+      if(state.league) body = renderLeague();
+    }
+  }
+  el.innerHTML = '<div>' + header + body + renderFooterLinks() + '</div>';
+}
+
+function renderJoin(errorMsg){
+  let html = '<div class="card"><h3>Join or Create a League</h3>';
+  if(errorMsg) html += '<p class="note" style="color:var(--danger);margin-top:0;">'+esc(errorMsg)+'</p>';
+  html += '<p class="note" style="margin-top:0;">Enter a league code to join, or start a new Last Wicket Standing league for the World Cup.</p>';
+  html += '<div class="form-grid"><div class="field full"><label>League Code</label><input type="text" id="joinCodeInput" placeholder="e.g. LTSPI" maxlength="5"></div></div>';
+  html += '<button class="btn-primary" style="margin-top:14px;" onclick="joinLeague()">Join League</button></div>';
+  html += '<div class="card"><h3>Start A New League</h3><div class="form-grid">'
+    + '<div class="field full"><label>League Name</label><input type="text" id="newLeagueName" placeholder="e.g. Barmy Army"></div>'
+    + '<div class="field full"><label>Admin PIN (4 digits)</label><input type="text" id="newLeaguePin" maxlength="4" placeholder="e.g. 1234"></div>'
+    + '</div><button class="btn-primary" style="margin-top:14px;" onclick="createLeague()">Create League</button></div>';
+  return html;
+}
+async function joinLeague(){
+  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+  if(!code){ alert('Enter a league code.'); return; }
+  state.code = code; state.league = null;
+  render();
+}
+async function createLeague(){
+  const name = document.getElementById('newLeagueName').value.trim();
+  const pin = document.getElementById('newLeaguePin').value.trim();
+  if(!name){ alert('Enter a league name.'); return; }
+  if(!/^\d{4}$/.test(pin)){ alert('Admin PIN must be 4 digits.'); return; }
+  const code = genCode();
+  const league = { code, name, adminPin: pin, players: [], picks: {}, groupResults: {}, super7Results: {}, semiWinners: {}, finalResult: null, tiebreak: {} };
+  await saveLeague(league);
+  state.code = code; state.league = league; state.adminUnlocked = true;
+  render();
+}
+function leaveLeague(){
+  state.code = null; state.league = null; state.identity = null; state.adminUnlocked = false;
+  render();
+}
+
+function renderPhaseStrip(round){
+  const stages = [
+    {key:'group', label:'Group Stage', from:1, to:5},
+    {key:'super7', label:'Super 7', from:6, to:12},
+    {key:'semis', label:'Semi-Finals', from:13, to:13},
+    {key:'final', label:'Final', from:14, to:14},
+  ];
+  let html = '<div class="phase-strip">';
+  stages.forEach(s=>{
+    const cls = round>s.to ? 'done' : (round>=s.from && round<=s.to ? 'current' : '');
+    html += '<span class="phase-pill '+cls+'">'+s.label+'</span>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderLeague(){
+  const league = state.league;
+  const round = currentOpenRound(league);
+  const standings = computePlayerStandings(league);
+  const me = state.identity ? standings.find(s=>s.id===state.identity.id) : null;
+  const alive = standings.filter(s=>s.alive).length;
+
+  let html = '<div class="card"><h3>Invite Players</h3>'
+    + '<p class="note" style="margin-top:0;">Share this link so others can join '+esc(league.name)+'.</p>'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+    +   '<input readonly value="'+esc(leagueShareLink(league.code))+'" onclick="this.select();" style="flex:1;min-width:200px;background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;color:var(--chalk-dim);padding:9px 10px;font-size:12px;font-family:\'Inter Tight\',monospace;">'
+    +   '<button id="invitePlayersLinkBtn" class="btn-secondary" onclick="copyText(\''+esc(leagueShareLink(league.code)).replace(/'/g,"\\'")+'\',\'invitePlayersLinkBtn\')">Copy Link</button>'
+    + '</div></div>';
+
+  html += '<div class="card"><h3>'+esc(league.name)+'</h3>';
+  html += renderPhaseStrip(round);
+  html += '<div class="lms-status-strip">'
+    + '<div class="lms-status-item"><div class="num">'+alive+'</div><div class="lbl">Survivors</div></div>'
+    + '<div class="lms-status-item"><div class="num">'+standings.length+'</div><div class="lbl">Total Players</div></div>'
+    + '<div class="lms-status-item"><div class="num" style="font-size:14px;">'+(round<=14?roundLabel(round):'Complete')+'</div><div class="lbl">Current Stage</div></div>'
+    + '</div>';
+  const champ = computeChampion(league);
+  if(champ && !champ.none){
+    html += '<div class="result-strip"><div><div class="result-label">Last Wicket Standing Champion'+(champ.tiebreak?' (tiebreak)':'')+'</div><div class="result-points">'+esc(champ.player.name)+'</div></div></div>';
+  }
+  html += '</div>';
+
+  if(!me){
+    html += '<div class="card"><h3>Add Yourself</h3><p class="note" style="margin-top:0;">Join this league with your name to start picking.</p>'
+      + '<div class="form-grid"><div class="field full"><label>Your name</label><input type="text" id="addName" placeholder="e.g. Dave"></div>'
+      + '<div class="field full"><label>Email (optional)</label><input type="email" id="addEmail" placeholder="e.g. you@example.com"></div></div>'
+      + '<button class="btn-primary" style="margin-top:14px;" onclick="addMeAsPlayer()">Join</button></div>';
+  } else {
+    html += renderPickCard(league, me, round);
+  }
+
+  html += renderAdmin(league, round);
+
+  html += '<div class="card"><h3>Leaderboard</h3><div style="overflow-x:auto;"><table><thead><tr><th>Player</th><th>Status</th><th>Badges</th></tr></thead><tbody>';
+  standings.slice().sort((a,b)=>(b.alive-a.alive)||(b.eliminatedAtRound||999)-(a.eliminatedAtRound||999)).forEach(s=>{
+    const isChamp = champ && !champ.none && champ.player.id===s.id;
+    let statusHtml;
+    if(isChamp) statusHtml = '<span class="status champ">Champion \uD83C\uDFC6</span>';
+    else statusHtml = '<span class="status '+(s.alive?'alive':'out')+'">'+(s.alive?'Still In':'Out ('+roundLabel(s.eliminatedAtRound)+')')+'</span>';
+    let badges = '';
+    if(s.survivedGroup && groupStageComplete(league)) badges += '<span class="badge-pill">Survived the Groups</span>';
+    if(s.madeSuper7) badges += '<span class="badge-pill">Made the Super 7</span>';
+    if(s.intoSemis) badges += '<span class="badge-pill">Into the Semis</span>';
+    if(s.mulliganUsed) badges += '<span class="badge-pill dim">Mulligan used</span>';
+    if(!badges) badges = '<span class="note" style="margin:0;">—</span>';
+    html += '<tr><td>'+esc(s.name)+'</td><td>'+statusHtml+'</td><td>'+badges+'</td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  return html;
+}
+
+async function addMeAsPlayer(){
+  const name = document.getElementById('addName').value.trim();
+  const email = document.getElementById('addEmail').value.trim();
+  if(!name){ alert('Enter your name.'); return; }
+  const league = state.league;
+  const id = 'p_'+Date.now()+'_'+Math.floor(Math.random()*10000);
+  league.players.push({ id, name, email });
+  await saveLeague(league);
+  state.identity = { id };
+  state.league = await loadLeague(state.code);
+  render();
+}
+
+function renderPickCard(league, me, round){
+  if(!me.alive){
+    return '<div class="card"><h3>Make Your Pick</h3><p class="note" style="margin-top:0;">You\'re out of this competition. Come back next tournament.</p></div>';
+  }
+  if(round>14){
+    return '<div class="card"><h3>Make Your Pick</h3><p class="note" style="margin-top:0;">The tournament is complete — check the leaderboard for the result.</p></div>';
+  }
+  const alreadyPicked = league.picks[round] && league.picks[round][me.id];
+  let html = '<div class="card"><h3>Make Your Pick — '+roundLabel(round)+'</h3>';
+  if(alreadyPicked!=null){
+    html += '<div class="result-strip"><div><div class="result-label">Locked In</div><div class="result-points">'+esc(team(alreadyPicked).name)+'</div></div></div>';
+    html += '<p class="note">Picks can\'t be changed once locked in.</p></div>';
+    return html;
+  }
+  const fx = fixturesForRound(league, round);
+  if(!fx){
+    html += '<p class="note" style="margin-top:0;">Waiting on the previous stage to be settled before this round\'s fixtures are known.</p></div>';
+    return html;
+  }
+  html += '<p class="note" style="margin-top:0;">Fixtures this round: '+fx.map(([a,b])=>team(a).short+' v '+team(b).short).join(', ')+'</p>';
+  if(round<=5 && !me.mulliganUsed){
+    html += '<p class="note">Group Stage: you have one mulligan — your first wrong pick this stage won\'t eliminate you.</p>';
+  }
+  if(round<=5){
+    html += '<p class="note">Team lock: you can\'t pick the same team twice during the Group Stage.</p>';
+  } else if(round<=12){
+    html += '<p class="note">Team lock reset for the Super 7 — you can\'t repeat a team within this stage.</p>';
+  }
+  const options = eligibleTeamsForRound(league, me, round).map(id=>team(id));
+  html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">';
+  options.forEach(t=>{
+    const staged = state.selectedTeam===t.id;
+    html += '<div class="team-chip'+(staged?' selected':'')+'" onclick="selectTeam('+t.id+')">'+kitSVG(t.id)+'<span class="team-name">'+esc(t.name)+'</span></div>';
+  });
+  html += '</div>';
+  if(round===14){
+    html += '<div class="form-grid" style="margin-top:16px;"><div class="field full"><label>Tiebreak: guess the margin of victory (runs or wickets)</label>'
+      + '<input type="number" id="tiebreakInput" placeholder="e.g. 34" value="'+esc(state.tiebreakGuess||'')+'" oninput="state.tiebreakGuess=this.value;"></div></div>'
+      + '<p class="note">If more than one survivor correctly picks the Final winner, closest guess wins the title.</p>';
+  }
+  const canLock = state.selectedTeam!=null;
+  html += '<button class="btn-primary" style="margin-top:16px;'+(canLock?'':'opacity:.4;cursor:not-allowed;')+'" '+(canLock?'onclick="lockPick()"':'disabled')+'>LOCK IN'+(canLock?': '+esc(team(state.selectedTeam).short).toUpperCase():'')+'</button>';
+  html += '</div>';
+  return html;
+}
+function selectTeam(id){ state.selectedTeam = id; render(); }
+async function lockPick(){
+  if(state.selectedTeam==null) return;
+  const league = state.league;
+  const round = currentOpenRound(league);
+  if(!league.picks[round]) league.picks[round] = {};
+  league.picks[round][state.identity.id] = state.selectedTeam;
+  if(round===14){
+    if(!league.tiebreak) league.tiebreak = {};
+    const g = parseFloat(state.tiebreakGuess);
+    if(!isNaN(g)) league.tiebreak[state.identity.id] = g;
+  }
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  state.selectedTeam = null; state.tiebreakGuess = '';
+  render();
+}
+
+function renderMyLeagueTab(){
+  const league = state.league;
+  return renderLeague();
+}
+
+/* ---------- League Table tab ---------- */
+function renderMiniTable(title, ids, wins){
+  let html = '<h4>'+esc(title)+'</h4><div style="overflow-x:auto;"><table><thead><tr><th>Pos</th><th>Team</th><th>W</th></tr></thead><tbody>';
+  const sorted = ids.slice().sort((a,b)=> (wins?wins[b]-wins[a]:0) || a-b);
+  sorted.forEach((id,i)=>{
+    html += '<tr><td>'+(i+1)+'</td><td><div style="display:flex;align-items:center;gap:8px;">'+kitSVG(id)+'<span>'+esc(team(id).short)+'</span></div></td>'
+      + '<td style="color:var(--floodlight);font-weight:700;">'+(wins?wins[id]:'—')+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+function renderLeagueTableTab(){
+  const league = state.league;
+  let html = '<div class="card"><h3>Group Stage</h3>';
+  html += '<p class="note" style="margin-top:0;">Wins shown from results your league\'s admin has entered so far. No net run rate — ties broken by original seeding.</p>';
+  const winsA = computeGroupWins(league, GROUP_A, GROUP_A_ROUNDS, 0);
+  const winsB = computeGroupWins(league, GROUP_B, GROUP_B_ROUNDS, 3);
+  html += renderMiniTable('Group A', GROUP_A, winsA);
+  html += renderMiniTable('Group B', GROUP_B, winsB);
+  html += '</div>';
+
+  const s7 = computeSuper7(league);
+  html += '<div class="card"><h3>Super 7</h3>';
+  if(!s7){
+    html += '<p class="note" style="margin-top:0;">Not yet determined — waiting on the Group Stage to finish (top 3 of each group + the next-best 4th-place side qualify).</p>';
+  } else {
+    const st = computeSuper7Standings(league);
+    html += renderMiniTable('Super 7 Table', s7.teams, st ? st.wins : null);
+    if(!st) html += '<p class="note">Waiting on results to be entered for this stage.</p>';
+  }
+  html += '</div>';
+
+  html += '<div class="card"><h3>Knockouts</h3>';
+  const pairs = semiPairs(league);
+  if(!pairs){
+    html += '<p class="note" style="margin-top:0;">Semi-finals not yet determined — waiting on the Super 7 to finish.</p>';
+  } else {
+    const sw = league.semiWinners ? league.semiWinners[13] : null;
+    ['Semi-Final 1','Semi-Final 2'].forEach((label,i)=>{
+      const [a,b] = pairs[i];
+      const winner = sw ? sw[i] : null;
+      html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:12px;color:var(--floodlight);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 8px;">'+label+'</p>';
+      html += '<div class="fixture-row" style="border-bottom:none;">'
+        + '<div class="badge-box">'+kitSVG(a)+'</div><span class="team-name" style="'+(winner===a?'color:var(--floodlight);':'')+'">'+esc(team(a).short)+(winner===a?' ✓':'')+'</span>'
+        + '<span class="vs">v</span>'
+        + '<div class="badge-box">'+kitSVG(b)+'</div><span class="team-name" style="'+(winner===b?'color:var(--floodlight);':'')+'">'+esc(team(b).short)+(winner===b?' ✓':'')+'</span>'
+        + '</div>';
+    });
+    const fp = finalPair(league);
+    html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:12px;color:var(--floodlight);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 8px;">Final</p>';
+    if(!fp){
+      html += '<p class="note" style="margin-top:0;">Waiting on both semi-finals to be settled.</p>';
+    } else {
+      const fr = league.finalResult;
+      html += '<div class="fixture-row" style="border-bottom:none;">'
+        + '<div class="badge-box">'+kitSVG(fp[0])+'</div><span class="team-name" style="'+(fr&&fr.winner===fp[0]?'color:var(--floodlight);':'')+'">'+esc(team(fp[0]).short)+(fr&&fr.winner===fp[0]?' ✓':'')+'</span>'
+        + '<span class="vs">v</span>'
+        + '<div class="badge-box">'+kitSVG(fp[1])+'</div><span class="team-name" style="'+(fr&&fr.winner===fp[1]?'color:var(--floodlight);':'')+'">'+esc(team(fp[1]).short)+(fr&&fr.winner===fp[1]?' ✓':'')+'</span>'
+        + '</div>';
+      if(fr && fr.winner!=null){
+        html += '<div class="result-strip"><div><div class="result-label">World Cup Champion</div><div class="result-points">'+esc(team(fr.winner).name)+'</div></div></div>';
+      }
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
+/* ---------- Fixtures tab ---------- */
+function renderFixturesTab(){
+  const league = state.league;
+  let html = '<div class="card"><h3>Fixtures</h3>';
+  if(!league){ html += '<p class="note" style="margin-top:0;">Join or create a league on the Home tab to see fixtures.</p></div>'; return html; }
+  for(let r=1;r<=14;r++){
+    const fx = fixturesForRound(league, r);
+    html += '<h4>'+roundLabel(r)+'</h4>';
+    if(!fx){ html += '<p class="note" style="margin-top:0;">Not yet determined.</p>'; continue; }
+    fx.forEach(([a,b])=>{
+      html += '<div class="fixture-row"><div class="badge-box">'+kitSVG(a)+'</div><span class="team-name">'+esc(team(a).short)+'</span><span class="vs">v</span><div class="badge-box">'+kitSVG(b)+'</div><span class="team-name">'+esc(team(b).short)+'</span></div>';
+    });
+  }
+  html += '</div>';
+  return html;
+}
+
+/* ---------- Rules tab ---------- */
+function renderRulesTab(){
+  return '<div class="card"><h3>How It Works</h3>'
+    + '<p class="note" style="margin-top:0;">Each round, pick one team you think will win its match. Your team loses — you\'re out, unless it\'s your Group Stage mulligan. Your team wins — you go through.</p>'
+    + '<p class="note"><strong style="color:var(--chalk);">Team lock:</strong> you can\'t pick the same team twice within the Group Stage, and the lock resets for the Super 7 (you can\'t repeat there either). No lock in the knockouts.</p>'
+    + '<p class="note"><strong style="color:var(--chalk);">One mulligan:</strong> your first wrong pick during the Group Stage (rounds 1–5 only) is forgiven — you stay in. Every other wrong pick, at any stage, eliminates you.</p>'
+    + '</div>'
+    + '<div class="card"><h3>Round 1 — Group Stage (5 rounds, 30 matches)</h3>'
+    + '<p class="note" style="margin-top:0;">12 teams split into two groups of six. Each side plays the other five in its group once, spread across 5 combined rounds (6 matches per round — all 12 teams play every round). Top 3 in each group, plus the next-best 4th-place side across both groups, advance to the Super 7.</p>'
+    + '</div>'
+    + '<div class="card"><h3>Round 2 — Super 7 (7 rounds, 21 matches)</h3>'
+    + '<p class="note" style="margin-top:0;">The 7 qualifiers play a single round-robin — 6 matches per team, one team on a bye each round. Top 4 at the end advance to the semi-finals.</p>'
+    + '</div>'
+    + '<div class="card"><h3>Semi-Finals &amp; Final</h3>'
+    + '<p class="note" style="margin-top:0;">1st plays 4th, 2nd plays 3rd. The two winners meet in the Final.</p>'
+    + '<p class="note"><strong style="color:var(--chalk);">Sudden-death tiebreak:</strong> if more than one player is still standing and correctly picks the Final winner, whoever\'s pre-submitted guess for the winning margin is closest to the real result is crowned Last Wicket Standing.</p>'
+    + '</div>'
+    + '<div class="card"><h3>A note on the team list</h3>'
+    + '<p class="note" style="margin-top:0;">The real 2027 ICC Men\'s Cricket World Cup fields 14 teams — 10 are already known (hosts South Africa &amp; Zimbabwe, plus the top 8 in the ODI rankings), but the final 4 aren\'t decided until the Feb–Mar 2027 Qualifiers. This league uses the current top 12 ICC ODI-ranked nations as a stand-in roster for the Group Stage onward, seeded into two groups.</p>'
+    + '</div>';
+}
+
+function renderContactTab(){
+  return '<div class="card"><h3>Contact</h3>'
+    + '<p class="note" style="margin-top:0;">Questions, feedback, or something not working as expected? Get in touch.</p>'
+    + '<table><tbody>'
+    + '<tr><td>Website</td><td><a class="link" href="https://Anticiplay.com" target="_blank">Anticiplay.com</a></td></tr>'
+    + '<tr><td>Email</td><td><a class="link" href="mailto:play@anticiplay.com">play@anticiplay.com</a></td></tr>'
+    + '</tbody></table></div>';
+}
+
+/* ---------- Site Admin tab ---------- */
+async function renderSiteAdminTab(){
+  if(!state.siteAdminUnlocked){
+    return '<div class="card"><h3>Site Admin</h3>'
+      + '<p class="note" style="margin-top:0;">Lists every league across the whole site — for the site owner only.</p>'
+      + '<div class="form-grid"><div class="field full"><label>Site Admin Password</label><input type="password" id="siteAdminPwInput"></div></div>'
+      + '<button class="btn-secondary" style="margin-top:12px;" onclick="checkSiteAdminPw()">Unlock</button>'
+      + '<p id="siteAdminPwError" style="font-size:13px;color:var(--danger);margin:8px 0 0;display:none;">Wrong password.</p>'
+      + '</div>';
+  }
+  if(state.allLeagues===null){ state.allLeagues = await loadAllLeagues(); }
+  let html = '<div class="card"><h3>Site Admin — All Leagues</h3>';
+  html += '<p style="margin:-8px 0 12px;"><a class="link" href="#" onclick="state.siteAdminUnlocked=false;state.allLeagues=null;render();return false;">Log out of Site Admin</a> · <a class="link" href="#" onclick="refreshSiteAdmin();return false;">Refresh</a></p>';
+  if(state.allLeagues.length===0){
+    html += '<p class="note" style="margin-top:0;">No leagues have been created yet.</p>';
+  } else {
+    html += '<div style="overflow-x:auto;"><table><thead><tr><th>League</th><th>Code</th><th>Players</th><th>Stage</th><th></th></tr></thead><tbody>';
+    state.allLeagues.forEach(lg=>{
+      const standings = computePlayerStandings(lg);
+      const alive = standings.filter(s=>s.alive).length;
+      const round = currentOpenRound(lg);
+      const copyBtnId = 'copyLink_'+lg.code;
+      html += '<tr>'
+        + '<td>'+esc(lg.name)+'</td>'
+        + '<td><span class="code-pill">'+esc(lg.code)+'</span></td>'
+        + '<td>'+alive+' in / '+standings.length+' total</td>'
+        + '<td>'+(round<=14 ? roundLabel(round) : 'Complete')+'</td>'
+        + '<td style="white-space:nowrap;">'
+        +   '<a class="link" href="#" onclick="viewLeagueFromSiteAdmin(\''+esc(lg.code)+'\');return false;">Open</a> · '
+        +   '<a class="link" href="#" style="color:var(--danger);" onclick="deleteLeagueFromSiteAdmin(\''+esc(lg.code)+'\',\''+esc(lg.name).replace(/'/g,"\\'")+'\');return false;">Remove</a> · '
+        +   '<a class="link" href="#" id="'+copyBtnId+'" onclick="copyText(\''+esc(leagueShareLink(lg.code)).replace(/'/g,"\\'")+'\',\''+copyBtnId+'\');return false;">Copy</a>'
+        + '</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+  return html;
+}
+function checkSiteAdminPw(){
+  const val = document.getElementById('siteAdminPwInput').value;
+  if(val === SITE_ADMIN_PASSWORD){ state.siteAdminUnlocked = true; state.allLeagues = null; render(); }
+  else document.getElementById('siteAdminPwError').style.display = 'block';
+}
+async function refreshSiteAdmin(){ state.allLeagues = await loadAllLeagues(); render(); }
+function viewLeagueFromSiteAdmin(code){
+  state.code = code; state.league = null; state.identity = null; state.adminUnlocked = false; state.tab = 'home';
+  render();
+}
+async function deleteLeagueFromSiteAdmin(code, name){
+  if(!confirm('Permanently delete "'+name+'" ('+code+')? This cannot be undone.')) return;
+  await deleteLeagueByCode(code);
+  state.allLeagues = await loadAllLeagues();
+  render();
+}
+
+/* ---------- Admin: enter results ---------- */
+function adminMatchRowHTML(a, b, curWinner, onClickA, onClickB){
+  return '<div class="admin-match-row">'
+    + '<div class="teams-line">'
+    +   '<div class="team-side"><div class="badge-box">'+kitSVG(a)+'</div><span class="team-name">'+esc(team(a).short)+'</span></div>'
+    +   '<span class="vs">v</span>'
+    +   '<div class="team-side right"><span class="team-name">'+esc(team(b).short)+'</span><div class="badge-box">'+kitSVG(b)+'</div></div>'
+    + '</div>'
+    + '<div class="buttons-line">'
+    +   '<button class="win-btn'+(curWinner===a?' active':'')+'" onclick="'+onClickA+'">'+esc(team(a).short)+' won</button>'
+    +   '<button class="win-btn'+(curWinner===b?' active':'')+'" onclick="'+onClickB+'">'+esc(team(b).short)+' won</button>'
+    + '</div>'
+    + '</div>';
+}
+function renderAdmin(league, round){
+  let html = '<div class="card"><h3>Admin — Enter Results</h3>';
+  if(!state.adminUnlocked){
+    html += '<div class="form-grid"><div class="field full"><label>Admin PIN</label><input type="text" id="adminPinInput" maxlength="4"></div></div>';
+    html += '<button class="btn-secondary" style="margin-top:12px;" onclick="checkAdminPin()">Unlock Admin</button></div>';
+    return html;
+  }
+  html += '<p style="margin:-8px 0 12px;"><a class="link" href="#" onclick="state.adminUnlocked=false;render();return false;">Log out of admin</a></p>';
+
+  html += '<div style="border-top:1px solid var(--pitch-line);margin-bottom:16px;padding-top:14px;">'
+    + '<label style="display:block;font-family:\'Inter Tight\',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--chalk-dim);margin-bottom:6px;">League Name</label>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    +   '<input type="text" id="renameLeagueInput" value="'+esc(league.name)+'" style="flex:1;min-width:180px;">'
+    +   '<button class="btn-secondary" id="renameLeagueBtn" onclick="renameLeague()">Save Name</button>'
+    + '</div></div>';
+
+  if(round>14){
+    html += '<p class="note" style="margin-top:0;">Tournament complete.</p>' + renderManagePlayers(league) + renderDangerZone() + '</div>';
+    return html;
+  }
+
+  if(round<=5){
+    const fx = groupFixturesForRound(round);
+    if(!league.groupResults[round]) league.groupResults[round] = [null,null,null,null,null,null];
+    html += '<p class="note" style="margin-top:0;">Enter the winner of each Group Stage match in '+roundLabel(round)+'.</p>';
+    fx.forEach(([a,b],i)=>{
+      const cur = league.groupResults[round][i];
+      html += adminMatchRowHTML(a, b, cur, "setGroupWinner("+round+","+i+","+a+")", "setGroupWinner("+round+","+i+","+b+")");
+    });
+    const allSet = league.groupResults[round].every(x=>x!=null);
+    html += '<button class="btn-primary" style="margin-top:16px;" '+(allSet?'':'disabled')+' onclick="settleAdmin()">Settle '+roundLabel(round)+'</button>';
+  } else if(round<=12){
+    const fx = super7FixturesForRound(league, round);
+    if(!fx){
+      html += '<p class="note" style="margin-top:0;">Waiting on the Group Stage to finish before the Super 7 fixtures are known.</p>';
+    } else {
+      if(!league.super7Results[round]) league.super7Results[round] = [null,null,null];
+      html += '<p class="note" style="margin-top:0;">Enter the winner of each Super 7 match in '+roundLabel(round)+'.</p>';
+      fx.forEach(([a,b],i)=>{
+        const cur = league.super7Results[round][i];
+        html += adminMatchRowHTML(a, b, cur, "setSuper7Winner("+round+","+i+","+a+")", "setSuper7Winner("+round+","+i+","+b+")");
+      });
+      const allSet = league.super7Results[round].every(x=>x!=null);
+      html += '<button class="btn-primary" style="margin-top:16px;" '+(allSet?'':'disabled')+' onclick="settleAdmin()">Settle '+roundLabel(round)+'</button>';
+    }
+  } else if(round===13){
+    const pairs = semiPairs(league);
+    if(!pairs){
+      html += '<p class="note" style="margin-top:0;">Waiting on the Super 7 to finish before the semi-finals are known.</p>';
+    } else {
+      if(!league.semiWinners[13]) league.semiWinners[13] = [null,null];
+      ['Semi-Final 1','Semi-Final 2'].forEach((label,i)=>{
+        const [a,b] = pairs[i];
+        const cur = league.semiWinners[13][i];
+        html += '<p class="note" style="margin:14px 0 4px;color:var(--floodlight);text-transform:uppercase;font-size:12px;">'+label+'</p>';
+        html += adminMatchRowHTML(a, b, cur, "setSemiWinner("+i+","+a+")", "setSemiWinner("+i+","+b+")");
+      });
+      const allSet = league.semiWinners[13].every(x=>x!=null);
+      html += '<button class="btn-primary" style="margin-top:16px;" '+(allSet?'':'disabled')+' onclick="settleAdmin()">Settle Semi-Finals</button>';
+    }
+  } else if(round===14){
+    const fp = finalPair(league);
+    if(!fp){
+      html += '<p class="note" style="margin-top:0;">Waiting on both semi-finals to be settled.</p>';
+    } else {
+      const fr = league.finalResult || {winner:null, margin:null};
+      html += '<p class="note" style="margin-top:0;">Enter the Final winner and the winning margin (used for the sudden-death tiebreak).</p>';
+      html += adminMatchRowHTML(fp[0], fp[1], fr.winner, "setFinalWinner("+fp[0]+")", "setFinalWinner("+fp[1]+")");
+      html += '<div class="form-grid" style="margin-top:12px;"><div class="field full"><label>Winning margin (runs or wickets)</label>'
+        + '<input type="number" id="finalMarginInput" value="'+(fr.margin!=null?fr.margin:'')+'" placeholder="e.g. 27"></div></div>';
+      html += '<button class="btn-primary" style="margin-top:16px;" onclick="settleFinal()">Settle Final &amp; Crown Champion</button>';
+    }
+  }
+
+  html += renderManagePlayers(league);
+  html += renderDangerZone();
+  html += '</div>';
+  return html;
+}
+function renderManagePlayers(league){
+  let html = '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">';
+  html += '<h3 style="margin-bottom:10px;">Manage Players</h3>';
+  if(!league.players || league.players.length===0){
+    html += '<p class="note" style="margin-top:0;">No one has joined yet.</p>';
+  } else {
+    html += '<div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Email</th></tr></thead><tbody>';
+    league.players.forEach(pl=>{
+      html += '<tr><td>'+esc(pl.name)+'</td><td>'+(pl.email ? esc(pl.email) : '<span style="color:var(--chalk-dim);">—</span>')+'</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+  return html;
+}
+function renderDangerZone(){
+  return '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">'
+    + '<h3 style="color:var(--danger);margin-bottom:10px;">Danger Zone</h3>'
+    + '<button class="btn-secondary" style="border-color:var(--danger);color:var(--danger);" onclick="deleteLeague()">Delete This League</button>'
+    + '</div>';
+}
+async function deleteLeague(){
+  if(!confirm('Permanently delete "'+state.league.name+'"? This cannot be undone.')) return;
+  await sb.from(TABLE).delete().eq('code', state.code);
+  leaveLeague();
+}
+async function renameLeague(){
+  const val = document.getElementById('renameLeagueInput').value.trim();
+  if(!val){ alert('League name can\'t be empty.'); return; }
+  state.league.name = val;
+  await saveLeague(state.league);
+  render();
+}
+function checkAdminPin(){
+  const val = document.getElementById('adminPinInput').value.trim();
+  if(val === state.league.adminPin){ state.adminUnlocked = true; render(); }
+  else alert('Wrong PIN.');
+}
+async function setGroupWinner(round, matchIdx, teamId){
+  const league = state.league;
+  if(!league.groupResults[round]) league.groupResults[round] = [null,null,null,null,null,null];
+  league.groupResults[round][matchIdx] = teamId;
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
+}
+async function setSuper7Winner(round, matchIdx, teamId){
+  const league = state.league;
+  if(!league.super7Results[round]) league.super7Results[round] = [null,null,null];
+  league.super7Results[round][matchIdx] = teamId;
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
+}
+async function setSemiWinner(pairIdx, teamId){
+  const league = state.league;
+  if(!league.semiWinners[13]) league.semiWinners[13] = [null,null];
+  league.semiWinners[13][pairIdx] = teamId;
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
+}
+async function setFinalWinner(teamId){
+  const league = state.league;
+  if(!league.finalResult) league.finalResult = {winner:null, margin:null};
+  league.finalResult.winner = teamId;
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
+}
+async function settleFinal(){
+  const league = state.league;
+  const marginVal = parseFloat(document.getElementById('finalMarginInput').value);
+  if(!league.finalResult || league.finalResult.winner==null){ alert('Pick the Final winner first.'); return; }
+  if(isNaN(marginVal)){ alert('Enter the winning margin.'); return; }
+  league.finalResult.margin = marginVal;
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
+}
+async function settleAdmin(){
+  state.league = await loadLeague(state.code);
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
