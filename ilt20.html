@@ -94,6 +94,8 @@
   .fixture-row{display:grid;grid-template-columns:38px 122px 22px 38px 1fr;align-items:center;column-gap:12px;font-family:'Inter Tight',sans-serif;font-size:13px;padding:10px 0;border-bottom:1px solid rgba(74,58,47,0.35);}
   .fixture-row:last-child{border-bottom:none;}
   .badge-box{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;flex-shrink:0;}
+  .badge-box.my-pick{border-color:var(--floodlight);border-width:2px;box-shadow:0 0 0 2px rgba(201,162,75,0.30);}
+  .team-name.my-pick{color:var(--floodlight);font-weight:800;}
   .badge-box img{max-width:80%;max-height:80%;object-fit:contain;display:block;}
   .vs{text-align:center;color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
   .admin-match-row{background:var(--pitch-800);border:1px solid var(--pitch-line);border-radius:8px;padding:14px;margin-bottom:12px;}
@@ -472,6 +474,7 @@ function renderLeagueTableCard(league){
 }
 function renderPlayoffBracketCard(league){
   const stages = [11,12,13,14];
+  const myId = state.identity ? state.identity.id : null;
   let html = '<div class="card"><h3>Playoffs</h3>';
   html += '<p class="note" style="margin-top:0;">Top 4 teams from the league table above. Qualifier 1 winner goes straight to the Final; the loser gets a second chance in Qualifier 2.</p>';
   stages.forEach(r=>{
@@ -479,6 +482,7 @@ function renderPlayoffBracketCard(league){
     const cell = league.playoffWinners ? league.playoffWinners[r] : null;
     const winner = matchWinnerOf(cell);
     const sc = matchScoresOf(cell);
+    const myPick = (myId && league.picks && league.picks[r]) ? league.picks[r][myId] : null;
     html += '<div style="margin:18px 0;">';
     html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:12px;color:var(--floodlight);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;">'+roundLabel(r)+'</p>';
     if(!pair){
@@ -487,12 +491,14 @@ function renderPlayoffBracketCard(league){
         + '</div>'
         + '<p class="note" style="margin:4px 0 0;">Not yet determined \u2014 waiting on earlier results.</p>';
     } else {
+      const aTag = winner===pair[0] ? ' \u2713' : (myPick===pair[0] ? ' \u2605 Your pick' : '');
+      const bTag = winner===pair[1] ? ' \u2713' : (myPick===pair[1] ? ' \u2605 Your pick' : '');
       html += '<div class="fixture-row" style="border-bottom:none;">'
-        + '<div class="badge-box">'+kitSVG(pair[0])+'</div>'
-        + '<span class="team-name" style="'+(winner===pair[0]?'color:var(--floodlight);':'')+'">'+esc(team(pair[0]).short)+(winner===pair[0]?' \u2713':'')+(sc.scoreA?' <span class="note" style="margin:0;">('+esc(sc.scoreA)+')</span>':'')+'</span>'
+        + '<div class="badge-box'+(myPick===pair[0]&&winner==null?' my-pick':'')+'">'+kitSVG(pair[0])+'</div>'
+        + '<span class="team-name'+(myPick===pair[0]&&winner==null?' my-pick':'')+'" style="'+(winner===pair[0]?'color:var(--floodlight);':'')+'">'+esc(team(pair[0]).short)+aTag+(sc.scoreA?' <span class="note" style="margin:0;">('+esc(sc.scoreA)+')</span>':'')+'</span>'
         + '<span class="vs">v</span>'
-        + '<div class="badge-box">'+kitSVG(pair[1])+'</div>'
-        + '<span class="team-name" style="'+(winner===pair[1]?'color:var(--floodlight);':'')+'">'+esc(team(pair[1]).short)+(winner===pair[1]?' \u2713':'')+(sc.scoreB?' <span class="note" style="margin:0;">('+esc(sc.scoreB)+')</span>':'')+'</span>'
+        + '<div class="badge-box'+(myPick===pair[1]&&winner==null?' my-pick':'')+'">'+kitSVG(pair[1])+'</div>'
+        + '<span class="team-name'+(myPick===pair[1]&&winner==null?' my-pick':'')+'" style="'+(winner===pair[1]?'color:var(--floodlight);':'')+'">'+esc(team(pair[1]).short)+bTag+(sc.scoreB?' <span class="note" style="margin:0;">('+esc(sc.scoreB)+')</span>':'')+'</span>'
         + '</div>';
       if(winner==null) html += '<p class="note" style="margin:4px 0 0;">Result not yet entered by admin.</p>';
     }
@@ -768,13 +774,15 @@ function renderRulesTab(){
     + '<p class="note" style="margin-top:0;text-align:left;">The last player (or players, if more than one survives to the same point) still standing wins. If everyone remaining is knocked out in the same round, there\'s no winner that season, and the league rolls straight over into a fresh season.</p>'
     + '</div>';
 }
-function fixtureRowHTML(a,b){
+function fixtureRowHTML(a,b,pickedTeamId){
+  const aPicked = pickedTeamId!=null && pickedTeamId===a;
+  const bPicked = pickedTeamId!=null && pickedTeamId===b;
   return '<div class="fixture-row">'
-    + '<div class="badge-box">'+kitSVG(a)+'</div>'
-    + '<span class="team-name">'+esc(team(a).short)+'</span>'
+    + '<div class="badge-box'+(aPicked?' my-pick':'')+'">'+kitSVG(a)+'</div>'
+    + '<span class="team-name'+(aPicked?' my-pick':'')+'">'+esc(team(a).short)+(aPicked?' \u2605 Your pick':'')+'</span>'
     + '<span class="vs">v</span>'
-    + '<div class="badge-box">'+kitSVG(b)+'</div>'
-    + '<span class="team-name">'+esc(team(b).short)+'</span>'
+    + '<div class="badge-box'+(bPicked?' my-pick':'')+'">'+kitSVG(b)+'</div>'
+    + '<span class="team-name'+(bPicked?' my-pick':'')+'">'+esc(team(b).short)+(bPicked?' \u2605 Your pick':'')+'</span>'
     + '</div>';
 }
 function renderFixturesTab(){
@@ -786,9 +794,11 @@ function renderFixturesTab(){
     {label:'Final', date:'4 Jan 2026', note:'Winner of Qualifier 1 v winner of Qualifier 2'}
   ];
   let html = '<p class="note" style="margin:0 0 16px;">Based on last season\'s ILT20 schedule (2 December 2025 \u2013 4 January 2026), mapped onto the 10-round league stage plus playoffs. This season\'s official schedule will replace these once announced.</p>';
+  const myId = state.identity ? state.identity.id : null;
   for(let r=1;r<=10;r++){
+    const myPick = (myId && state.league && state.league.picks && state.league.picks[r]) ? state.league.picks[r][myId] : null;
     html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;"><h3 style="margin:0;">Round '+r+'</h3><span class="note" style="margin:0;">'+roundDates[r-1]+'</span></div>';
-    fixturesForRound(r).forEach(([a,b])=>{ html += fixtureRowHTML(a,b); });
+    fixturesForRound(r).forEach(([a,b])=>{ html += fixtureRowHTML(a,b,myPick); });
     html += '</div>';
   }
   if(state.league){

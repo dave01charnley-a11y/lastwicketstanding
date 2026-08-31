@@ -96,6 +96,8 @@
   .fixture-row{display:grid;grid-template-columns:38px 122px 22px 38px 1fr;align-items:center;column-gap:12px;font-family:'Inter Tight',sans-serif;font-size:13px;padding:10px 0;border-bottom:1px solid rgba(74,58,47,0.35);}
   .fixture-row:last-child{border-bottom:none;}
   .badge-box{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:6px;flex-shrink:0;}
+  .badge-box.my-pick{border-color:var(--floodlight);border-width:2px;box-shadow:0 0 0 2px rgba(201,162,75,0.30);}
+  .team-name.my-pick{color:var(--floodlight);font-weight:800;}
   .badge-box img{max-width:80%;max-height:80%;object-fit:contain;display:block;}
   .vs{text-align:center;color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
   .admin-match-row{background:var(--pitch-800);border:1px solid var(--pitch-line);border-radius:8px;padding:14px;margin-bottom:12px;}
@@ -1012,32 +1014,39 @@ function renderLeagueTableTab(){
 
   html += '<div class="card"><h3>Knockouts</h3>';
   const pairs = semiPairs(league);
+  const myId = state.identity ? state.identity.id : null;
   if(!pairs){
     html += '<p class="note" style="margin-top:0;">Semi-finals not yet determined — waiting on the Super 7 to finish.</p>';
   } else {
     const sw = league.semiWinners ? league.semiWinners[13] : null;
+    const myPick13 = (myId && league.picks && league.picks[13]) ? league.picks[13][myId] : null;
     ['Semi-Final 1','Semi-Final 2'].forEach((label,i)=>{
       const [a,b] = pairs[i];
       const cell = sw ? sw[i] : null;
       const winner = matchWinnerOf(cell);
       const sc = matchScoresOf(cell);
+      const aTag = winner===a ? ' ✓' : (myPick13===a ? ' \u2605 Your pick' : '');
+      const bTag = winner===b ? ' ✓' : (myPick13===b ? ' \u2605 Your pick' : '');
       html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:12px;color:var(--floodlight);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 8px;">'+label+'</p>';
       html += '<div class="fixture-row" style="border-bottom:none;">'
-        + '<div class="badge-box">'+kitSVG(a)+'</div><span class="team-name" style="'+(winner===a?'color:var(--floodlight);':'')+'">'+esc(team(a).short)+(winner===a?' ✓':'')+(sc.scoreA?' <span class="note" style="margin:0;">('+esc(sc.scoreA)+')</span>':'')+'</span>'
+        + '<div class="badge-box'+(myPick13===a&&winner==null?' my-pick':'')+'">'+kitSVG(a)+'</div><span class="team-name'+(myPick13===a&&winner==null?' my-pick':'')+'" style="'+(winner===a?'color:var(--floodlight);':'')+'">'+esc(team(a).short)+aTag+(sc.scoreA?' <span class="note" style="margin:0;">('+esc(sc.scoreA)+')</span>':'')+'</span>'
         + '<span class="vs">v</span>'
-        + '<div class="badge-box">'+kitSVG(b)+'</div><span class="team-name" style="'+(winner===b?'color:var(--floodlight);':'')+'">'+esc(team(b).short)+(winner===b?' ✓':'')+(sc.scoreB?' <span class="note" style="margin:0;">('+esc(sc.scoreB)+')</span>':'')+'</span>'
+        + '<div class="badge-box'+(myPick13===b&&winner==null?' my-pick':'')+'">'+kitSVG(b)+'</div><span class="team-name'+(myPick13===b&&winner==null?' my-pick':'')+'" style="'+(winner===b?'color:var(--floodlight);':'')+'">'+esc(team(b).short)+bTag+(sc.scoreB?' <span class="note" style="margin:0;">('+esc(sc.scoreB)+')</span>':'')+'</span>'
         + '</div>';
     });
     const fp = finalPair(league);
+    const myPick14 = (myId && league.picks && league.picks[14]) ? league.picks[14][myId] : null;
     html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:12px;color:var(--floodlight);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 8px;">Final</p>';
     if(!fp){
       html += '<p class="note" style="margin-top:0;">Waiting on both semi-finals to be settled.</p>';
     } else {
       const fr = league.finalResult;
+      const faTag = (fr&&fr.winner===fp[0]) ? ' ✓' : (myPick14===fp[0] ? ' \u2605 Your pick' : '');
+      const fbTag = (fr&&fr.winner===fp[1]) ? ' ✓' : (myPick14===fp[1] ? ' \u2605 Your pick' : '');
       html += '<div class="fixture-row" style="border-bottom:none;">'
-        + '<div class="badge-box">'+kitSVG(fp[0])+'</div><span class="team-name" style="'+(fr&&fr.winner===fp[0]?'color:var(--floodlight);':'')+'">'+esc(team(fp[0]).short)+(fr&&fr.winner===fp[0]?' ✓':'')+(fr&&fr.scoreA?' <span class="note" style="margin:0;">('+esc(fr.scoreA)+')</span>':'')+'</span>'
+        + '<div class="badge-box'+(myPick14===fp[0]&&!(fr&&fr.winner!=null)?' my-pick':'')+'">'+kitSVG(fp[0])+'</div><span class="team-name'+(myPick14===fp[0]&&!(fr&&fr.winner!=null)?' my-pick':'')+'" style="'+(fr&&fr.winner===fp[0]?'color:var(--floodlight);':'')+'">'+esc(team(fp[0]).short)+faTag+(fr&&fr.scoreA?' <span class="note" style="margin:0;">('+esc(fr.scoreA)+')</span>':'')+'</span>'
         + '<span class="vs">v</span>'
-        + '<div class="badge-box">'+kitSVG(fp[1])+'</div><span class="team-name" style="'+(fr&&fr.winner===fp[1]?'color:var(--floodlight);':'')+'">'+esc(team(fp[1]).short)+(fr&&fr.winner===fp[1]?' ✓':'')+(fr&&fr.scoreB?' <span class="note" style="margin:0;">('+esc(fr.scoreB)+')</span>':'')+'</span>'
+        + '<div class="badge-box'+(myPick14===fp[1]&&!(fr&&fr.winner!=null)?' my-pick':'')+'">'+kitSVG(fp[1])+'</div><span class="team-name'+(myPick14===fp[1]&&!(fr&&fr.winner!=null)?' my-pick':'')+'" style="'+(fr&&fr.winner===fp[1]?'color:var(--floodlight);':'')+'">'+esc(team(fp[1]).short)+fbTag+(fr&&fr.scoreB?' <span class="note" style="margin:0;">('+esc(fr.scoreB)+')</span>':'')+'</span>'
         + '</div>';
       if(fr && fr.winner!=null){
         html += '<div class="result-strip"><div><div class="result-label">World Cup Champion</div><div class="result-points">'+esc(team(fr.winner).name)+'</div></div></div>';
@@ -1053,12 +1062,16 @@ function renderFixturesTab(){
   const league = state.league;
   let html = '<div class="card"><h3>Fixtures</h3>';
   if(!league){ html += '<p class="note" style="margin-top:0;">Join or create a league on the Home tab to see fixtures.</p></div>'; return html; }
+  const myId = state.identity ? state.identity.id : null;
   for(let r=1;r<=14;r++){
     const fx = fixturesForRound(league, r);
+    const myPick = (myId && league.picks && league.picks[r]) ? league.picks[r][myId] : null;
     html += '<h4>'+roundLabel(r)+'</h4>';
     if(!fx){ html += '<p class="note" style="margin-top:0;">Not yet determined.</p>'; continue; }
     fx.forEach(([a,b])=>{
-      html += '<div class="fixture-row"><div class="badge-box">'+kitSVG(a)+'</div><span class="team-name">'+esc(team(a).short)+'</span><span class="vs">v</span><div class="badge-box">'+kitSVG(b)+'</div><span class="team-name">'+esc(team(b).short)+'</span></div>';
+      const aPicked = myPick!=null && myPick===a;
+      const bPicked = myPick!=null && myPick===b;
+      html += '<div class="fixture-row"><div class="badge-box'+(aPicked?' my-pick':'')+'">'+kitSVG(a)+'</div><span class="team-name'+(aPicked?' my-pick':'')+'">'+esc(team(a).short)+(aPicked?' \u2605 Your pick':'')+'</span><span class="vs">v</span><div class="badge-box'+(bPicked?' my-pick':'')+'">'+kitSVG(b)+'</div><span class="team-name'+(bPicked?' my-pick':'')+'">'+esc(team(b).short)+(bPicked?' \u2605 Your pick':'')+'</span></div>';
     });
   }
   html += '</div>';
