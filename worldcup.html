@@ -1068,11 +1068,11 @@ async function renderSiteAdminTab(){
         + '<td><span class="code-pill">'+esc(lg.code)+'</span></td>'
         + '<td>'+alive+' in / '+standings.length+' total</td>'
         + '<td>'+(round<=14 ? roundLabel(round) : 'Complete')+'</td>'
-        + '<td style="white-space:nowrap;">'
-        +   '<a class="link" href="#" onclick="viewLeagueFromSiteAdmin(\''+esc(lg.code)+'\');return false;">Enter Results</a> · '
-        +   '<a class="link" href="#" style="color:var(--danger);" onclick="deleteLeagueFromSiteAdmin(\''+esc(lg.code)+'\',\''+esc(lg.name).replace(/'/g,"\\'")+'\');return false;">Remove</a> · '
-        +   '<a class="link" href="#" id="'+copyBtnId+'" onclick="copyText(\''+esc(leagueShareLink(lg.code)).replace(/'/g,"\\'")+'\',\''+copyBtnId+'\');return false;">Copy Link</a>'
-        + '</td>'
+        + '<td style="white-space:nowrap;"><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;">'
+        +   '<button class="btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="viewLeagueFromSiteAdmin(\''+esc(lg.code)+'\')">Enter Results</button>'
+        +   '<button class="btn-secondary" style="padding:6px 12px;font-size:12px;" id="'+copyBtnId+'" onclick="copyText(\''+esc(leagueShareLink(lg.code)).replace(/'/g,"\\'")+'\',\''+copyBtnId+'\')">Copy Link</button>'
+        +   '<button class="btn-secondary" style="padding:6px 12px;font-size:12px;border-color:var(--danger);color:var(--danger);" onclick="deleteLeagueFromSiteAdmin(\''+esc(lg.code)+'\',\''+esc(lg.name).replace(/'/g,"\\'")+'\')">Remove</button>'
+        + '</div></td>'
         + '</tr>';
     });
     html += '</tbody></table></div>';
