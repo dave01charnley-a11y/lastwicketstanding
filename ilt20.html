@@ -667,6 +667,11 @@ async function renderSiteAdminTab(){
     html += '<p class="note">Public link: <a class="link" href="'+esc(leagueShareLink(state.league.code))+'" target="_blank">'+esc(leagueShareLink(state.league.code))+'</a></p>';
     html += '</div>';
     html += renderAdmin(state.league, round);
+    if(state.adminUnlocked){
+      html += renderManagePlayers(state.league);
+      html += renderBrandingAdmin(state.league);
+      html += renderDangerZone();
+    }
     return html;
   }
   if(state.allLeagues===null){
@@ -1183,14 +1188,11 @@ function renderAdmin(league, round){
       : '<p class="note" style="margin-top:16px;">Enter the winner to open the next stage automatically.</p>';
   }
 
-  html += renderManagePlayers(league);
-  html += renderBrandingAdmin(league);
-  html += renderDangerZone();
   html += '</div>';
   return html;
 }
 function renderManagePlayers(league){
-  let html = '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">';
+  let html = '<div class="card">';
   html += '<h3 style="margin-bottom:10px;">Manage Players</h3>';
   if(!league.players || league.players.length===0){
     html += '<p class="note" style="margin-top:0;">No one has joined yet.</p>';
@@ -1304,7 +1306,7 @@ async function setPlayoffScore(round, side, value){
   render();
 }
 function renderBrandingAdmin(league){
-  let html = '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">';
+  let html = '<div class="card">';
   html += '<h3 style="margin-bottom:10px;">Branding</h3>';
   if(league.logo && league.logo.image){
     html += '<img src="'+league.logo.image+'" style="max-height:70px;max-width:200px;display:block;margin-bottom:10px;background:#fff;padding:6px;border-radius:6px;">';
@@ -1312,7 +1314,7 @@ function renderBrandingAdmin(league){
   html += '<div class="form-grid"><div class="field full"><label>Group / sponsor logo</label><input type="file" accept="image/*" id="logoInput"></div></div>';
   html += '<button class="btn-secondary" style="margin-top:10px;" onclick="saveLogo()">Save Logo</button>';
   html += '</div>';
-  html += '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">';
+  html += '<div class="card">';
   html += '<h3 style="margin-bottom:10px;">Sponsors &amp; Prize</h3>';
   html += '<p class="note" style="margin-top:0;">Shown to players on the Home tab. Uploading new sponsor logos replaces the current set (up to 6).</p>';
   if(league.sponsors && league.sponsors.length>0){
@@ -1328,7 +1330,7 @@ function renderBrandingAdmin(league){
     + '</div>';
   html += '<button class="btn-secondary" style="margin-top:10px;" onclick="saveSponsorsAndPrize()">Save Sponsors &amp; Prize</button>';
   html += '</div>';
-  html += '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">';
+  html += '<div class="card">';
   html += '<h3 style="margin-bottom:10px;">Hall of Fame</h3>';
   html += '<p class="note" style="margin-top:0;">Currently Season '+(league.season||1)+'. Once this season\'s knockouts are settled, archive it to crown the champion and start a fresh season with the same players.</p>';
   const champsNow = getChampion(league);
@@ -1383,7 +1385,7 @@ async function saveSponsorsAndPrize(){
   render();
 }
 function renderDangerZone(){
-  return '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">'
+  return '<div class="card">'
     + '<h3 style="color:var(--danger);margin-bottom:10px;">Danger Zone</h3>'
     + '<button class="btn-secondary" style="border-color:var(--danger);color:var(--danger);" onclick="deleteLeague()">Delete This League</button>'
     + '</div>';

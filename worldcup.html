@@ -1132,6 +1132,11 @@ async function renderSiteAdminTab(){
     html += '<p class="note">Public link: <a class="link" href="'+esc(leagueShareLink(state.league.code))+'" target="_blank">'+esc(leagueShareLink(state.league.code))+'</a></p>';
     html += '</div>';
     html += renderAdmin(state.league, round);
+    if(state.adminUnlocked){
+      html += renderManagePlayers(state.league);
+      html += renderBrandingAdmin(state.league);
+      html += renderDangerZone();
+    }
     return html;
   }
   if(state.allLeagues===null){ state.allLeagues = await loadAllLeagues(); }
@@ -1319,7 +1324,11 @@ function renderAdmin(league, round){
     }
   }
 
-  html += '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">';
+  html += '</div>';
+  return html;
+}
+function renderBrandingAdmin(league){
+  let html = '<div class="card">';
   html += '<h3 style="margin-bottom:10px;">Sponsors &amp; Prize</h3>';
   html += '<p class="note" style="margin-top:0;">Shown to players on the Home tab. Uploading new sponsor logos replaces the current set (up to 6).</p>';
   if(league.sponsors && league.sponsors.length>0){
@@ -1335,21 +1344,17 @@ function renderAdmin(league, round){
     + '</div>';
   html += '<button class="btn-secondary" style="margin-top:10px;" onclick="saveSponsorsAndPrize()">Save Sponsors &amp; Prize</button>';
   html += '</div>';
-  html += '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">';
+  html += '<div class="card">';
   html += '<h3 style="margin-bottom:10px;">Hall of Fame</h3>';
   html += '<p class="note" style="margin-top:0;">Currently Season '+(league.season||1)+'. Once the Final is settled, archive the season to crown the champion and start a fresh one with the same players.</p>';
   const champNow = computeChampion(league);
   const seasonDone = champNow !== null;
   html += '<button class="btn-secondary" style="margin-top:6px;'+(seasonDone?'':'opacity:.4;cursor:not-allowed;')+'" '+(seasonDone?'onclick="archiveSeason()"':'disabled')+'>Archive Season &amp; Start New Season</button>';
   html += '</div>';
-
-  html += renderManagePlayers(league);
-  html += renderDangerZone();
-  html += '</div>';
   return html;
 }
 function renderManagePlayers(league){
-  let html = '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">';
+  let html = '<div class="card">';
   html += '<h3 style="margin-bottom:10px;">Manage Players</h3>';
   if(!league.players || league.players.length===0){
     html += '<p class="note" style="margin-top:0;">No one has joined yet.</p>';
@@ -1416,7 +1421,7 @@ async function removePlayerFromLeague(playerId, playerName){
   render();
 }
 function renderDangerZone(){
-  return '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">'
+  return '<div class="card">'
     + '<h3 style="color:var(--danger);margin-bottom:10px;">Danger Zone</h3>'
     + '<button class="btn-secondary" style="border-color:var(--danger);color:var(--danger);" onclick="deleteLeague()">Delete This League</button>'
     + '</div>';
