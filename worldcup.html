@@ -212,7 +212,7 @@ function kitSVG(id){
 
 /* ---------- App state ---------- */
 const SITE_ADMIN_PASSWORD = 'lws-admin-2026';
-const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null, tiebreakGuess: '', tab: 'home', siteAdminUnlocked: false, allLeagues: null, siteAdminView: 'list' };
+const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null, tiebreakGuess: '', tab: 'home', siteAdminUnlocked: false, allLeagues: null, siteAdminView: 'list', siteAdminError: null };
 const params = new URLSearchParams(window.location.search);
 if(params.get('code')) state.code = params.get('code').toUpperCase();
 
@@ -226,9 +226,16 @@ async function saveLeague(league){
   await sb.from(TABLE).upsert({ code: league.code, data: league, updated_at: new Date().toISOString() });
 }
 async function loadAllLeagues(){
-  const { data, error } = await sb.from(TABLE).select('*').order('updated_at', { ascending: false });
-  if(error || !data) return [];
-  return data.map(row => row.data);
+  /* Previously chained .order('updated_at') onto the query itself — if that
+     ever fails for any reason, Supabase can silently return an empty result
+     instead of surfacing the error, making Site Admin look empty with no
+     clue why. Fetch unordered and sort client-side instead, and keep the
+     error message around so the UI can actually show it. */
+  const { data, error } = await sb.from(TABLE).select('*');
+  if(error){ state.siteAdminError = error.message || 'Could not load leagues.'; return []; }
+  state.siteAdminError = null;
+  const rows = (data||[]).slice().sort((a,b)=> new Date(b.updated_at||0) - new Date(a.updated_at||0));
+  return rows.map(row => row.data);
 }
 async function deleteLeagueByCode(code){
   await sb.from(TABLE).delete().eq('code', code);
@@ -971,7 +978,9 @@ async function renderSiteAdminTab(){
   let html = '<div class="card"><h3>Site Admin — All Leagues</h3>';
   html += '<p style="margin:-8px 0 12px;"><a class="link" href="#" onclick="state.siteAdminUnlocked=false;state.allLeagues=null;render();return false;">Log out of Site Admin</a> · <a class="link" href="#" onclick="refreshSiteAdmin();return false;">Refresh</a></p>';
   if(state.allLeagues.length===0){
-    html += '<p class="note" style="margin-top:0;">No leagues have been created yet.</p>';
+    html += state.siteAdminError
+      ? '<p class="note" style="margin-top:0;color:var(--danger);">Couldn\'t load leagues: '+esc(state.siteAdminError)+'</p>'
+      : '<p class="note" style="margin-top:0;">No leagues have been created yet.</p>';
   } else {
     html += '<div style="overflow-x:auto;"><table><thead><tr><th>League</th><th>Code</th><th>Players</th><th>Stage</th><th></th></tr></thead><tbody>';
     state.allLeagues.forEach(lg=>{
@@ -994,6 +1003,26 @@ async function renderSiteAdminTab(){
     html += '</tbody></table></div>';
   }
   html += '</div>';
+
+  const allPlayers = [];
+  (state.allLeagues||[]).forEach(lg=>{
+    (lg.players||[]).forEach(p=>{
+      allPlayers.push({ name: p.name, email: p.email||'', leagueName: lg.name||'—', code: lg.code });
+    });
+  });
+  html += '<div class="card"><h3>All Player Emails</h3>';
+  html += '<p class="note" style="margin-top:0;">Every player across every league, in one place — handy for a site-wide announcement. To remove someone, open their league above and use Manage Players.</p>';
+  if(allPlayers.length===0){
+    html += '<p class="note">No players yet.</p>';
+  } else {
+    html += '<div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Email</th><th>League</th><th>Code</th></tr></thead><tbody>';
+    allPlayers.forEach(p=>{
+      html += '<tr><td>'+esc(p.name)+'</td><td>'+(p.email?'<a class="link" href="mailto:'+esc(p.email)+'">'+esc(p.email)+'</a>':'<span class="note" style="margin:0;">No email</span>')+'</td><td>'+esc(p.leagueName)+'</td><td><span class="code-pill">'+esc(p.code)+'</span></td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
   return html;
 }
 function checkSiteAdminPw(){
@@ -1139,14 +1168,28 @@ function renderManagePlayers(league){
   if(!league.players || league.players.length===0){
     html += '<p class="note" style="margin-top:0;">No one has joined yet.</p>';
   } else {
-    html += '<div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Email</th></tr></thead><tbody>';
+    html += '<p class="note" style="margin-top:0;">Removing someone deletes their picks and history from this league — this can\'t be undone, so it\'s meant for cleaning up duplicates or test entries.</p>';
+    html += '<div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Email</th><th></th></tr></thead><tbody>';
     league.players.forEach(pl=>{
-      html += '<tr><td>'+esc(pl.name)+'</td><td>'+(pl.email ? esc(pl.email) : '<span style="color:var(--chalk-dim);">—</span>')+'</td></tr>';
+      html += '<tr><td>'+esc(pl.name)+'</td><td>'+(pl.email ? esc(pl.email) : '<span style="color:var(--chalk-dim);">—</span>')+'</td>'
+        + '<td><button class="btn-secondary" style="padding:6px 12px;font-size:12px;border-color:var(--danger);color:var(--danger);" onclick="removePlayerFromLeague(\''+esc(pl.id)+'\',\''+esc(pl.name).replace(/'/g,"\\'")+'\')">Remove</button></td></tr>';
     });
     html += '</tbody></table></div>';
   }
   html += '</div>';
   return html;
+}
+async function removePlayerFromLeague(playerId, playerName){
+  if(!confirm('Remove '+playerName+' from this league? Their picks and history will be deleted. This cannot be undone.')) return;
+  const league = state.league;
+  league.players = (league.players||[]).filter(p=>p.id!==playerId);
+  if(league.picks){
+    Object.keys(league.picks).forEach(r=>{ if(league.picks[r]) delete league.picks[r][playerId]; });
+  }
+  if(league.tiebreak){ delete league.tiebreak[playerId]; }
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
 }
 function renderDangerZone(){
   return '<div style="border-top:1px solid var(--pitch-line);margin-top:20px;padding-top:16px;">'
