@@ -75,7 +75,18 @@
   .lms-status-item{display:flex;flex-direction:column;gap:2px;}
   .lms-status-item .num{font-family:'Inter Tight',serif;font-size:22px;font-weight:700;color:var(--floodlight);}
   .lms-status-item .lbl{font-family:'Inter Tight',sans-serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--chalk-dim);}
-  .team-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:2px solid var(--pitch-line);background:var(--pitch-800);cursor:pointer;}
+  .team-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:2px solid var(--pitch-line);background:var(--pitch-800);cursor:pointer;position:relative;}
+  .team-chip[data-tip]:hover::after{
+    content:attr(data-tip);
+    position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:8px;
+    background:var(--pitch-950);border:1px solid var(--floodlight-dim);color:var(--floodlight);
+    padding:5px 10px;border-radius:6px;font-family:'Inter Tight',monospace;font-size:11px;
+    white-space:nowrap;z-index:20;box-shadow:0 4px 10px rgba(0,0,0,0.4);
+  }
+  .team-chip[data-tip]:hover::before{
+    content:'';position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:2px;
+    border:5px solid transparent;border-top-color:var(--floodlight-dim);z-index:20;
+  }
   .team-chip .crest{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;}
   .team-chip.selected{border-color:var(--floodlight);background:var(--pitch-900);}
   .team-chip.used{opacity:.35;cursor:not-allowed;pointer-events:none;filter:grayscale(1);}
@@ -793,7 +804,7 @@ function renderLeague(){
 
   // PICK CARD
   if(me){
-    html += renderPickCard(league, me, round);
+    html += '<div class="card"><h3>Make Your Pick</h3><p class="note" style="margin-top:0;">Head to the <a class="link" href="#" onclick="setTab(\'myleague\');return false;">My Picks</a> tab to make this round\'s pick.</p></div>';
   } else if(!state.identity){
     html += '<div class="card"><h3>Add Yourself</h3><p class="note" style="margin-top:0;">Join this league with your name to start picking.</p><div class="form-grid"><div class="field full"><label>Your name</label><input type="text" id="addName" placeholder="e.g. Dave"></div><div class="field full"><label>Email (optional)</label><input type="email" id="addEmail" placeholder="e.g. you@example.com"></div></div><button class="btn-primary" style="margin-top:14px;" onclick="addMeAsPlayer()">Join</button></div>';
   }
@@ -828,6 +839,7 @@ async function addMeAsPlayer(){
   await saveLeague(league);
   state.identity = { id };
   state.league = await loadLeague(state.code);
+  state.tab = 'myleague';
   render();
 }
 function leaveLeague(){
@@ -850,8 +862,9 @@ function renderPickCard(league, me, round){
     return html;
   }
   let options;
+  let fx;
   if(round<=10){
-    const fx = fixturesForRound(round);
+    fx = fixturesForRound(round);
     html += '<p class="note" style="margin-top:0;">Fixtures this round: '+fx.map(([a,b])=>team(a).short+' v '+team(b).short).join(', ')+'</p>';
     const allUsedOnce = TEAMS.every(t=>me.usedCounts[t.id]>0);
     html += '<p class="note">'+(allUsedOnce ? 'Second time round — pick any team you\'ve already used once.' : 'Every team must be picked once before any repeats.')+'</p>';
@@ -862,13 +875,17 @@ function renderPickCard(league, me, round){
       html += '<p class="note" style="margin-top:0;">Waiting on the previous match to be settled before this fixture is known.</p></div>';
       return html;
     }
+    fx = [pair];
     html += '<p class="note" style="margin-top:0;">'+team(pair[0]).name+' v '+team(pair[1]).name+'</p>';
     options = pair.map(id=>team(id));
   }
   html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">';
   options.forEach(t=>{
     const staged = state.selectedTeam===t.id;
-    html += '<div class="team-chip'+(staged?' selected':'')+'" onclick="selectTeam('+t.id+')">'+kitSVG(t.id)+'<span class="team-name">'+esc(t.name)+'</span></div>';
+    const match = fx.find(([a,b])=>a===t.id||b===t.id);
+    const oppId = match ? (match[0]===t.id ? match[1] : match[0]) : null;
+    const tip = oppId!=null ? (t.short+' v '+team(oppId).short) : '';
+    html += '<div class="team-chip'+(staged?' selected':'')+'" data-tip="'+esc(tip)+'" onclick="selectTeam('+t.id+')">'+kitSVG(t.id)+'<span class="team-name">'+esc(t.name)+'</span></div>';
   });
   html += '</div>';
   const canLock = state.selectedTeam!=null;
