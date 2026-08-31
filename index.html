@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --pitch-950:#0A211A;
@@ -75,6 +76,36 @@
     font-size:12px;text-transform:uppercase;letter-spacing:.04em;}
   .footer-links a{color:var(--floodlight);text-decoration:none;margin:0 8px;}
   .footer-links a:hover{text-decoration:underline;}
+  .lookup-card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border:1px solid var(--floodlight-dim);border-radius:14px;padding:26px 28px;
+    max-width:560px;margin:0 auto 40px;text-align:center;
+  }
+  .lookup-card h2{font-family:'Inter Tight',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.03em;margin:0 0 10px;color:var(--floodlight);}
+  .lookup-card p{color:var(--chalk-dim);font-size:13px;line-height:1.6;margin:0 0 16px;}
+  .lookup-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .lookup-row input{
+    flex:1;min-width:200px;background:var(--pitch-950);border:1px solid var(--pitch-line);border-radius:8px;
+    color:var(--chalk);padding:12px 14px;font-family:'Inter Tight',serif;font-size:14px;
+  }
+  .lookup-row button{
+    font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-weight:800;font-size:13px;
+    background:none;color:var(--floodlight);border:1px solid var(--floodlight-dim);border-radius:8px;
+    padding:12px 20px;cursor:pointer;white-space:nowrap;
+  }
+  .lookup-row button:disabled{opacity:.5;cursor:not-allowed;}
+  #lookupResults{margin-top:16px;display:flex;flex-direction:column;gap:10px;text-align:left;}
+  #lookupResults a{
+    display:block;text-decoration:none;background:var(--pitch-800);border:1px solid var(--pitch-line);
+    border-radius:8px;padding:12px 16px;color:var(--chalk);font-size:14px;transition:border-color .15s;
+  }
+  #lookupResults a:hover{border-color:var(--floodlight-dim);}
+  #lookupResults a .tag{
+    display:inline-block;font-family:'Inter Tight',sans-serif;font-size:10px;text-transform:uppercase;
+    letter-spacing:.05em;background:var(--floodlight);color:var(--pitch-950);padding:2px 8px;border-radius:10px;
+    margin-right:8px;font-weight:800;
+  }
+  #lookupResults .lookup-error{color:var(--danger);font-size:13px;margin:0;}
 </style>
 </head>
 <body>
@@ -84,6 +115,16 @@
 
   <h1>Last Wicket Standing</h1>
   <p class="sub">Pick a team every round. Get it wrong and you're out. Survive longer than everyone else and you're the last one standing. Choose your competition below.</p>
+
+  <div class="lookup-card">
+    <h2>Already Registered?</h2>
+    <p>Find your team with just your email &mdash; we&rsquo;ll check both ILT20 and World Cup 2027 for you.</p>
+    <div class="lookup-row">
+      <input type="email" id="lookupEmail" placeholder="e.g. you@example.com">
+      <button id="lookupBtn" onclick="findMyTeams()">Find My Team</button>
+    </div>
+    <div id="lookupResults"></div>
+  </div>
 
   <div class="leagues">
     <div class="league-card">
@@ -112,5 +153,50 @@
     <a href="mailto:play@anticiplay.com">Contact</a>
   </div>
 </div>
+<script>
+const SUPABASE_URL = 'https://plpevtpsjmmbobdxotmr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable__8Eb_FMqLioU0gBn38AkXQ_b6F_zO2r';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function findMyTeams(){
+  const emailInput = document.getElementById('lookupEmail');
+  const email = emailInput.value.trim().toLowerCase();
+  const resultsEl = document.getElementById('lookupResults');
+  const btn = document.getElementById('lookupBtn');
+  if(!email){ resultsEl.innerHTML = '<p class="lookup-error">Enter your email first.</p>'; return; }
+  btn.disabled = true; btn.textContent = 'Searching\u2026';
+  resultsEl.innerHTML = '';
+  try{
+    const [ilt20Res, wcRes] = await Promise.all([
+      sb.from('lws_leagues').select('*'),
+      sb.from('lws_wc2027_leagues').select('*'),
+    ]);
+    const matches = [];
+    (ilt20Res.data||[]).forEach(row=>{
+      const lg = row.data;
+      (lg.players||[]).forEach(p=>{
+        if((p.email||'').toLowerCase()===email) matches.push({ tag:'ILT20', url:'/ilt20.html', code: lg.code, name: lg.name });
+      });
+    });
+    (wcRes.data||[]).forEach(row=>{
+      const lg = row.data;
+      (lg.players||[]).forEach(p=>{
+        if((p.email||'').toLowerCase()===email) matches.push({ tag:'World Cup 2027', url:'/worldcup.html', code: lg.code, name: lg.name });
+      });
+    });
+    if(matches.length===0){
+      resultsEl.innerHTML = '<p class="lookup-error">No player found with that email. Check the address, or join a league below if you\'re new here.</p>';
+    } else {
+      resultsEl.innerHTML = matches.map(m=>{
+        const link = m.url+'?code='+encodeURIComponent(m.code)+'&email='+encodeURIComponent(email);
+        return '<a href="'+link+'"><span class="tag">'+esc(m.tag)+'</span>'+esc(m.name)+' &rarr;</a>';
+      }).join('');
+    }
+  } catch(e){
+    resultsEl.innerHTML = '<p class="lookup-error">Something went wrong searching \u2014 try again in a moment.</p>';
+  }
+  btn.disabled = false; btn.textContent = 'Find My Team';
+}
+</script>
 </body>
 </html>

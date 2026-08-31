@@ -186,9 +186,10 @@ function crestHTML(id){
    PIN. Like the per-league PIN, it's only a soft deterrent — it's visible to
    anyone who reads this file's source, not real security. */
 const SITE_ADMIN_PASSWORD = 'lws-admin-2026';
-const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null, tab: 'home', siteAdminUnlocked: false, allLeagues: null, siteAdminView: 'list', siteAdminError: null, showEmailLogin: false };
+const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null, tab: 'home', siteAdminUnlocked: false, allLeagues: null, siteAdminView: 'list', siteAdminError: null, showEmailLogin: false, lookupMatches: null };
 const params = new URLSearchParams(window.location.search);
 if(params.get('code')) state.code = params.get('code').toUpperCase();
+const lookupEmailParam = params.get('email');
 
 /* ---------- Data access ---------- */
 async function loadLeague(code){
@@ -809,11 +810,18 @@ function renderJoin(err){
     + '</div>';
   if(err) html += '<div class="card" style="border-color:var(--danger);"><p class="note" style="margin:0;color:var(--danger);">'+esc(err)+'</p></div>';
   html += '<div class="card" style="border-color:var(--floodlight-dim);"><h3>Already Registered?</h3>';
-  html += '<p class="note" style="margin-top:0;">Get straight back to your team — no need to remember which tab you left it on.</p>';
-  html += '<div class="form-grid">';
-  html += '<div class="field full"><label>League code</label><input type="text" id="lookupCode" placeholder="e.g. AB12C" style="text-transform:uppercase;"></div>';
-  html += '<div class="field full"><label>Your email</label><input type="email" id="lookupEmail" placeholder="e.g. you@example.com"></div>';
-  html += '</div><button class="btn-secondary" style="margin-top:14px;width:100%;" onclick="lookupMyTeam()">Take Me To My Team</button></div>';
+  if(state.lookupMatches && state.lookupMatches.length>0){
+    html += '<p class="note" style="margin-top:0;">Found your email in more than one league \u2014 which one?</p>';
+    state.lookupMatches.forEach((m,i)=>{
+      html += '<button class="btn-secondary" style="width:100%;margin-bottom:8px;" onclick="goToLookupMatchByIndex('+i+')">'+esc(m.name)+' <span style="color:var(--chalk-dim);">('+esc(m.code)+')</span></button>';
+    });
+  } else {
+    html += '<p class="note" style="margin-top:0;">Get straight back to your team \u2014 just your email, no code to remember. Playing World Cup 2027 too? <a class="link" href="/">Look yourself up from the homepage</a> and it\'ll check both.</p>';
+    html += '<div class="form-grid">';
+    html += '<div class="field full"><label>Your email</label><input type="email" id="lookupEmail" placeholder="e.g. you@example.com"></div>';
+    html += '</div><button id="lookupBtn" class="btn-secondary" style="margin-top:14px;width:100%;" onclick="lookupMyTeam()">Find My Team</button>';
+  }
+  html += '</div>';
   html += '<div class="card"><h3>Join a league</h3><div class="form-grid">';
   html += '<div class="field full"><label>League code</label><input type="text" id="joinCode" placeholder="e.g. AB12C" style="text-transform:uppercase;"></div>';
   html += '<div class="field full"><label>Your name</label><input type="text" id="joinName" placeholder="e.g. Dave"></div>';
@@ -826,17 +834,40 @@ function renderJoin(err){
   return html;
 }
 async function lookupMyTeam(){
-  const code = document.getElementById('lookupCode').value.trim().toUpperCase();
   const email = document.getElementById('lookupEmail').value.trim().toLowerCase();
-  if(!code || !email){ alert('Enter your league code and email.'); return; }
-  const league = await loadLeague(code);
-  if(!league){ document.getElementById('app').innerHTML = renderJoin('Couldn\'t find a league with that code.'); return; }
-  const match = (league.players||[]).find(p=>(p.email||'').toLowerCase()===email);
-  if(!match){ alert('No player with that email in '+league.name+'. Check the code and email, or join below if you\'re new here.'); return; }
-  state.code = code; state.league = league; state.identity = { id: match.id };
-  setStoredIdentity(code, match.id);
+  if(!email){ alert('Enter your email.'); return; }
+  const btn = document.getElementById('lookupBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Searching\u2026'; }
+  const leagues = await loadAllLeagues();
+  if(btn){ btn.disabled = false; btn.textContent = 'Find My Team'; }
+  const matches = [];
+  leagues.forEach(lg=>{
+    (lg.players||[]).forEach(p=>{
+      if((p.email||'').toLowerCase()===email) matches.push({ code: lg.code, name: lg.name, playerId: p.id });
+    });
+  });
+  if(matches.length===0){
+    alert('No player with that email found in ILT20. Check the email, or join a league below if you\'re new here. Playing World Cup 2027 too? Look yourself up from the landing page \u2014 it checks both.');
+    return;
+  }
+  if(matches.length===1){
+    await goToLookupMatch(matches[0]);
+    return;
+  }
+  state.lookupMatches = matches;
+  render();
+}
+async function goToLookupMatch(match){
+  const league = await loadLeague(match.code);
+  if(!league){ alert('Could not load that league.'); return; }
+  state.code = match.code; state.league = league; state.identity = { id: match.playerId };
+  setStoredIdentity(match.code, match.playerId);
+  state.lookupMatches = null;
   state.tab = 'myleague';
   render();
+}
+function goToLookupMatchByIndex(i){
+  goToLookupMatch(state.lookupMatches[i]);
 }
 async function createLeague(){
   const name = document.getElementById('newName').value.trim();
@@ -948,6 +979,15 @@ function restoreIdentity(league){
   const stored = getStoredIdentity(league.code);
   if(stored && (league.players||[]).some(p=>p.id===stored.id)){
     state.identity = stored;
+    return;
+  }
+  if(lookupEmailParam){
+    const email = lookupEmailParam.trim().toLowerCase();
+    const match = (league.players||[]).find(p=>(p.email||'').toLowerCase()===email);
+    if(match){
+      state.identity = { id: match.id };
+      setStoredIdentity(league.code, match.id);
+    }
   }
 }
 function isValidEmail(email){
