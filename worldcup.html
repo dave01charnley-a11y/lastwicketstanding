@@ -673,7 +673,13 @@ async function render(){
 }
 
 function renderJoin(errorMsg){
-  let html = '<div class="card"><h3>Join or Create a League</h3>';
+  let html = '<div class="card" style="border-color:var(--floodlight-dim);"><h3>Already Registered?</h3>';
+  html += '<p class="note" style="margin-top:0;">Get straight back to your team \u2014 no need to remember which tab you left it on.</p>';
+  html += '<div class="form-grid">'
+    + '<div class="field full"><label>League Code</label><input type="text" id="lookupCodeInput" placeholder="e.g. LTSPI" maxlength="5" style="text-transform:uppercase;"></div>'
+    + '<div class="field full"><label>Your Email</label><input type="email" id="lookupEmailInput" placeholder="e.g. you@example.com"></div>'
+    + '</div><button class="btn-secondary" style="margin-top:14px;width:100%;" onclick="lookupMyTeam()">Take Me To My Team</button></div>';
+  html += '<div class="card"><h3>Join or Create a League</h3>';
   if(errorMsg) html += '<p class="note" style="color:var(--danger);margin-top:0;">'+esc(errorMsg)+'</p>';
   html += '<p class="note" style="margin-top:0;">Enter a league code to join, or start a new Last Wicket Standing league for the World Cup.</p>';
   html += '<div class="form-grid"><div class="field full"><label>League Code</label><input type="text" id="joinCodeInput" placeholder="e.g. LTSPI" maxlength="5"></div></div>';
@@ -688,6 +694,19 @@ async function joinLeague(){
   const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
   if(!code){ alert('Enter a league code.'); return; }
   state.code = code; state.league = null;
+  render();
+}
+async function lookupMyTeam(){
+  const code = document.getElementById('lookupCodeInput').value.trim().toUpperCase();
+  const email = document.getElementById('lookupEmailInput').value.trim().toLowerCase();
+  if(!code || !email){ alert('Enter your league code and email.'); return; }
+  const league = await loadLeague(code);
+  if(!league){ document.getElementById('app').innerHTML = renderJoin('Couldn\'t find a league with that code.'); return; }
+  const match = (league.players||[]).find(p=>(p.email||'').toLowerCase()===email);
+  if(!match){ alert('No player with that email in '+league.name+'. Check the code and email, or join below if you\'re new here.'); return; }
+  state.code = code; state.league = league; state.identity = { id: match.id };
+  setStoredIdentity(code, match.id);
+  state.tab = 'myleague';
   render();
 }
 async function createLeague(){

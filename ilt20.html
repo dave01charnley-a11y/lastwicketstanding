@@ -808,16 +808,35 @@ function renderJoin(err){
     + '<p class="note" style="margin:0;">If you love football go to <a class="link" href="https://www.Anticiplay.com" target="_blank">www.Anticiplay.com</a> and play Premier League \u2014 <strong style="color:var(--chalk);">Last Man Standing</strong> for free.</p>'
     + '</div>';
   if(err) html += '<div class="card" style="border-color:var(--danger);"><p class="note" style="margin:0;color:var(--danger);">'+esc(err)+'</p></div>';
+  html += '<div class="card" style="border-color:var(--floodlight-dim);"><h3>Already Registered?</h3>';
+  html += '<p class="note" style="margin-top:0;">Get straight back to your team — no need to remember which tab you left it on.</p>';
+  html += '<div class="form-grid">';
+  html += '<div class="field full"><label>League code</label><input type="text" id="lookupCode" placeholder="e.g. AB12C" style="text-transform:uppercase;"></div>';
+  html += '<div class="field full"><label>Your email</label><input type="email" id="lookupEmail" placeholder="e.g. you@example.com"></div>';
+  html += '</div><button class="btn-secondary" style="margin-top:14px;width:100%;" onclick="lookupMyTeam()">Take Me To My Team</button></div>';
   html += '<div class="card"><h3>Join a league</h3><div class="form-grid">';
   html += '<div class="field full"><label>League code</label><input type="text" id="joinCode" placeholder="e.g. AB12C" style="text-transform:uppercase;"></div>';
   html += '<div class="field full"><label>Your name</label><input type="text" id="joinName" placeholder="e.g. Dave"></div>';
-  html += '<div class="field full"><label>Email (optional)</label><input type="email" id="joinEmail" placeholder="e.g. you@example.com"></div>';
+  html += '<div class="field full"><label>Email</label><input type="email" id="joinEmail" placeholder="e.g. you@example.com"></div>';
   html += '</div><button class="btn-primary" style="margin-top:14px;" onclick="joinLeague()">Join League</button></div>';
   html += '<div class="card"><h3>Start a new league</h3><div class="form-grid">';
   html += '<div class="field full"><label>League name</label><input type="text" id="newName" placeholder="e.g. ILT20 Test League"></div>';
   html += '<div class="field full"><label>Admin PIN (4 digits)</label><input type="text" id="newPin" maxlength="4" placeholder="e.g. 1234"></div>';
   html += '</div><button class="btn-primary" style="margin-top:14px;" onclick="createLeague()">Create League</button></div>';
   return html;
+}
+async function lookupMyTeam(){
+  const code = document.getElementById('lookupCode').value.trim().toUpperCase();
+  const email = document.getElementById('lookupEmail').value.trim().toLowerCase();
+  if(!code || !email){ alert('Enter your league code and email.'); return; }
+  const league = await loadLeague(code);
+  if(!league){ document.getElementById('app').innerHTML = renderJoin('Couldn\'t find a league with that code.'); return; }
+  const match = (league.players||[]).find(p=>(p.email||'').toLowerCase()===email);
+  if(!match){ alert('No player with that email in '+league.name+'. Check the code and email, or join below if you\'re new here.'); return; }
+  state.code = code; state.league = league; state.identity = { id: match.id };
+  setStoredIdentity(code, match.id);
+  state.tab = 'myleague';
+  render();
 }
 async function createLeague(){
   const name = document.getElementById('newName').value.trim();
@@ -834,12 +853,19 @@ async function joinLeague(){
   const name = document.getElementById('joinName').value.trim();
   const email = document.getElementById('joinEmail').value.trim();
   if(!code || !name){ alert('Enter a league code and your name.'); return; }
+  if(!email || !isValidEmail(email)){ alert('Enter a valid email address — it\'s how round confirmations will reach you, and how you can get back to your picks on another device.'); return; }
   const league = await loadLeague(code);
   if(!league){ document.getElementById('app').innerHTML = renderJoin('Couldn\'t find a league with that code.'); return; }
+  if((league.players||[]).some(p=>(p.email||'').toLowerCase()===email.toLowerCase())){
+    document.getElementById('app').innerHTML = renderJoin('That email is already registered in '+league.name+'. Use "Already Registered?" above instead.');
+    return;
+  }
   const id = 'p_'+Date.now()+'_'+Math.floor(Math.random()*10000);
   league.players.push({ id, name, email });
   await saveLeague(league);
   state.code = code; state.league = league; state.identity = { id };
+  setStoredIdentity(code, id);
+  state.tab = 'myleague';
   render();
 }
 
