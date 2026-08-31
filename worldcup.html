@@ -9,23 +9,23 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --pitch-950:#0A0A0A;
-    --pitch-900:#121212;
-    --pitch-800:#241C14;
-    --pitch-line:#4A3A2F;
-    --chalk:#FFFFFF;
-    --chalk-dim:#C4B7AE;
-    --floodlight:#FFD700;
-    --floodlight-dim:#B8960A;
-    --brass:#22C55E;
-    --danger:#E0796B;
+    --pitch-950:#0A211A;
+    --pitch-900:#12352A;
+    --pitch-800:#1C4436;
+    --pitch-line:rgba(201,162,75,0.28);
+    --chalk:#F1E9D6;
+    --chalk-dim:rgba(241,233,214,0.65);
+    --floodlight:#E4C97A;
+    --floodlight-dim:#C9A24B;
+    --brass:#3E7C5C;
+    --danger:#B5432B;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
     background:
-      radial-gradient(1200px 600px at 50% -10%, rgba(255,215,0,0.08), transparent 60%),
-      linear-gradient(180deg, var(--pitch-950), var(--pitch-900) 40%, var(--pitch-950));
+      radial-gradient(1200px 700px at 85% -10%, rgba(201,162,75,0.18), transparent 55%),
+      linear-gradient(160deg, var(--pitch-900) 0%, var(--pitch-950) 55%, var(--pitch-950) 100%);
     color:var(--chalk);
     font-family:'Inter Tight', Georgia, serif;
     font-weight:700;
@@ -70,9 +70,9 @@
     padding:8px 14px;cursor:pointer;
   }
   .status{display:inline-block;font-family:'Inter Tight',monospace;font-size:11px;text-transform:uppercase;padding:3px 9px;border-radius:4px;letter-spacing:.03em;}
-  .status.alive{background:rgba(255,215,0,0.22);color:var(--chalk);}
-  .status.out{background:rgba(224,121,107,0.2);color:var(--danger);}
-  .status.champ{background:rgba(34,197,94,0.28);color:var(--chalk);}
+  .status.alive{background:rgba(201,162,75,0.22);color:var(--chalk);}
+  .status.out{background:rgba(181,67,43,0.2);color:var(--danger);}
+  .status.champ{background:rgba(62,124,92,0.28);color:var(--chalk);}
   .lms-status-strip{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:18px;padding:14px 18px;background:var(--pitch-800);border-radius:10px;border:1px solid var(--pitch-line);}
   .lms-status-item{display:flex;flex-direction:column;gap:2px;}
   .lms-status-item .num{font-family:'Inter Tight',serif;font-size:22px;font-weight:700;color:var(--floodlight);}
@@ -104,27 +104,36 @@
   .admin-match-row .team-side.right{justify-content:flex-end;}
   .admin-match-row .buttons-line{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .admin-match-row .win-btn{width:100%;text-align:center;padding:10px 8px;}
-  .result-strip{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(90deg, rgba(255,215,0,0.10), transparent);border:1px solid var(--floodlight-dim);border-radius:8px;padding:16px 20px;margin-top:8px;}
+  .result-strip{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(90deg, rgba(201,162,75,0.10), transparent);border:1px solid var(--floodlight-dim);border-radius:8px;padding:16px 20px;margin-top:8px;}
   .result-label{font-family:'Inter Tight',sans-serif;text-transform:uppercase;font-size:13px;color:var(--chalk-dim);letter-spacing:.03em;}
   .result-points{font-family:'Inter Tight',monospace;font-size:22px;font-weight:700;color:var(--floodlight);letter-spacing:.04em;}
   .code-pill{font-family:'Inter Tight',monospace;background:var(--pitch-950);border:1px solid var(--floodlight-dim);color:var(--floodlight);padding:3px 10px;border-radius:6px;font-size:13px;letter-spacing:.05em;}
   .link{color:var(--floodlight);text-decoration:none;}
   .link:hover{text-decoration:underline;}
   .win-btn{font-family:'Inter Tight',monospace;font-size:12px;font-weight:700;padding:8px 12px;border-radius:6px;cursor:pointer;border:1px solid var(--pitch-line);background:var(--pitch-950);color:var(--chalk-dim);}
-  .win-btn.active{background:rgba(255,215,0,0.22);color:var(--chalk);border-color:var(--floodlight);}
+  .win-btn.active{background:rgba(201,162,75,0.22);color:var(--chalk);border-color:var(--floodlight);}
   .badge-pill{display:inline-block;font-family:'Inter Tight',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:4px 9px;border-radius:12px;margin:0 6px 6px 0;background:var(--pitch-950);border:1px solid var(--floodlight-dim);color:var(--floodlight);}
   .badge-pill.dim{color:var(--chalk-dim);border-color:var(--pitch-line);}
   .phase-strip{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
   .phase-pill{font-family:'Inter Tight',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:6px 10px;border-radius:14px;border:1px solid var(--pitch-line);background:var(--pitch-950);color:var(--chalk-dim);}
   .phase-pill.done{background:var(--pitch-800);color:var(--chalk);}
   .phase-pill.current{background:var(--floodlight);color:var(--pitch-950);border-color:var(--floodlight);}
-  nav.main-nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 22px;border-bottom:1px solid var(--pitch-line);padding-bottom:12px;}
+  nav.main-nav{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 24px;border-bottom:2px solid rgba(201,162,75,0.22);}
   nav.main-nav button{
-    font-family:'Inter Tight',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-weight:700;font-size:12px;
-    background:none;border:1px solid var(--pitch-line);color:var(--chalk-dim);padding:8px 16px;border-radius:20px;cursor:pointer;
+    font-family:'Inter Tight',sans-serif;font-weight:700;font-size:14px;letter-spacing:.02em;
+    background:none;border:none;color:var(--chalk-dim);padding:11px 14px 13px;
+    border-bottom:3px solid transparent;border-radius:0;cursor:pointer;transition:color .15s, border-color .15s;
   }
-  nav.main-nav button.active{background:var(--floodlight);color:var(--pitch-950);border-color:var(--floodlight);}
+  nav.main-nav button:hover{color:var(--chalk);}
+  nav.main-nav button.active{background:none;color:var(--floodlight);border-color:var(--floodlight-dim);}
   .footer-links{text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--pitch-line);font-size:12px;text-transform:uppercase;letter-spacing:.04em;}
+  header.hero, .hero{
+    position:relative;padding:26px 26px 22px;border-radius:18px;
+    background:
+      radial-gradient(circle at 85% -10%, rgba(201,162,75,0.28), transparent 55%),
+      linear-gradient(160deg, var(--pitch-900) 0%, var(--pitch-950) 100%);
+    border:1px solid rgba(201,162,75,0.25);margin-bottom:22px;overflow:hidden;
+  }
 </style>
 </head>
 <body>
@@ -609,12 +618,13 @@ function renderFooterLinks(){
 }
 async function render(){
   const el = document.getElementById('app');
-  let header = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:6px;flex-wrap:wrap;justify-content:space-between;">'
+  let header = '<div class="hero"><div style="display:flex;align-items:center;gap:16px;margin-bottom:6px;flex-wrap:wrap;justify-content:space-between;">'
     + '<img src="'+LOGO_ANTICIPLAY+'" style="height:48px;object-fit:contain;display:block;order:2;" alt="Anticiplay">'
     + '<img src="'+LOGO_LWS+'" style="height:64px;object-fit:contain;display:block;order:1;" alt="Last Wicket Standing">'
     + '</div>'
     + '<p class="powered" style="margin-top:2px;">World Cup 2027 Edition</p>'
     + '<p class="sub">Pick a team every round. Lose and you\'re out — unless it\'s your one Group Stage mulligan. Survive the Group Stage, the Super 7, and the knockouts to be crowned Last Wicket Standing.</p>'
+    + '</div>'
     + renderNav()
     + renderAppSwitcher();
   let body;
@@ -1174,6 +1184,7 @@ function renderAdmin(league, round){
     const allSet = league.groupResults[round].every(x=>matchWinnerOf(x)!=null);
     html += allSet
       ? '<p class="note" style="margin-top:16px;color:var(--floodlight);">\u2713 All results in \u2014 the next round is now open. No further action needed.</p>'
+        + '<button class="btn-secondary" id="emailBtn_'+round+'" style="margin-top:4px;" onclick="sendRoundEmails('+round+',\'emailBtn_'+round+'\')">Email Players \u2014 '+roundLabel(round)+' Results</button>'
       : '<p class="note" style="margin-top:16px;">Enter all six winners to open the next round automatically \u2014 there\'s no separate step to advance it.</p>';
   } else if(round<=12){
     const fx = super7FixturesForRound(league, round);
@@ -1191,6 +1202,7 @@ function renderAdmin(league, round){
       const allSet = league.super7Results[round].every(x=>matchWinnerOf(x)!=null);
       html += allSet
         ? '<p class="note" style="margin-top:16px;color:var(--floodlight);">\u2713 All results in \u2014 the next round is now open. No further action needed.</p>'
+          + '<button class="btn-secondary" id="emailBtn_'+round+'" style="margin-top:4px;" onclick="sendRoundEmails('+round+',\'emailBtn_'+round+'\')">Email Players \u2014 '+roundLabel(round)+' Results</button>'
         : '<p class="note" style="margin-top:16px;">Enter all three winners to open the next round automatically.</p>';
     }
   } else if(round===13){
@@ -1210,6 +1222,7 @@ function renderAdmin(league, round){
       const allSet = league.semiWinners[13].every(x=>matchWinnerOf(x)!=null);
       html += allSet
         ? '<p class="note" style="margin-top:16px;color:var(--floodlight);">\u2713 Both results in \u2014 the Final is now open. No further action needed.</p>'
+          + '<button class="btn-secondary" id="emailBtn_13" style="margin-top:4px;" onclick="sendRoundEmails(13,\'emailBtn_13\')">Email Players \u2014 Semi-Final Results</button>'
         : '<p class="note" style="margin-top:16px;">Enter both winners to open the Final automatically.</p>';
     }
   } else if(round===14){
@@ -1226,6 +1239,7 @@ function renderAdmin(league, round){
         + '<input type="number" id="finalMarginInput" value="'+(fr.margin!=null?fr.margin:'')+'" placeholder="e.g. 27" onchange="setFinalMargin(this.value)"></div></div>';
       html += finalComplete(league)
         ? '<p class="note" style="margin-top:16px;color:var(--floodlight);">\u2713 Winner and margin both in \u2014 the champion is crowned automatically. No further action needed.</p>'
+          + '<button class="btn-secondary" id="emailBtn_14" style="margin-top:4px;" onclick="sendRoundEmails(14,\'emailBtn_14\')">Email Players \u2014 Final Results</button>'
         : '<p class="note" style="margin-top:16px;">Enter both the winner and the margin to crown the champion automatically.</p>';
     }
   }
@@ -1275,6 +1289,44 @@ function renderManagePlayers(league){
   }
   html += '</div>';
   return html;
+}
+/* ---------- Round result emails (via Resend, through /api/send-emails) ---------- */
+function buildRoundEmailMessages(league, round){
+  const standings = computePlayerStandings(league);
+  const messages = [];
+  standings.forEach(s=>{
+    if(!s.email) return;
+    const entry = s.history.find(h=>h.round===round);
+    if(!entry || entry.result==='Pending' || entry.result==='—') return;
+    const teamName = team(entry.teamId).name;
+    const won = entry.result==='Win';
+    const mulligan = entry.result.indexOf('mulligan')>=0;
+    let statusLine;
+    if(won) statusLine = 'Your pick, '+teamName+', won! You\'re through to '+(round<14?'the next round':'the result')+'.';
+    else if(mulligan) statusLine = 'Your pick, '+teamName+', lost \u2014 but that\'s your Group Stage mulligan used, so you\'re still in.';
+    else statusLine = 'Your pick, '+teamName+', lost. You\'ve been eliminated from '+esc(league.name)+'.';
+    const subject = league.name+' \u2014 '+roundLabel(round)+' Result';
+    const html = '<p>Hi '+esc(s.name)+',</p><p>'+statusLine+'</p><p><a href="'+esc(leagueShareLink(league.code))+'">Go to '+esc(league.name)+'</a></p>';
+    messages.push({ to: s.email, subject, html });
+  });
+  return messages;
+}
+async function sendRoundEmails(round, btnId){
+  const league = state.league;
+  const messages = buildRoundEmailMessages(league, round);
+  if(messages.length===0){ alert('No emails to send \u2014 either nobody picked this round, or nobody on file has an email.'); return; }
+  if(!confirm('Send '+messages.length+' result email'+(messages.length===1?'':'s')+' for '+roundLabel(round)+'?')) return;
+  const btn = btnId ? document.getElementById(btnId) : null;
+  if(btn){ btn.disabled = true; btn.textContent = 'Sending\u2026'; }
+  try{
+    const res = await fetch('/api/send-emails', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ messages }) });
+    const data = await res.json();
+    if(!res.ok){ alert('Emails may not have sent: '+(data.error||res.statusText)); }
+    else { alert('Sent '+messages.length+' email'+(messages.length===1?'':'s')+' for '+roundLabel(round)+'.'); }
+  } catch(e){
+    alert('Could not reach the email service: '+e.message);
+  }
+  if(btn){ btn.disabled = false; btn.textContent = 'Email Players \u2014 '+roundLabel(round)+' Results'; }
 }
 async function removePlayerFromLeague(playerId, playerName){
   if(!confirm('Remove '+playerName+' from this league? Their picks and history will be deleted. This cannot be undone.')) return;
