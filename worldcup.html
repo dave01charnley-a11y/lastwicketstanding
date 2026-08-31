@@ -223,7 +223,7 @@ function kitSVG(id){
 
 /* ---------- App state ---------- */
 const SITE_ADMIN_PASSWORD = 'lws-admin-2026';
-const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null, tiebreakGuess: '', tab: 'home', siteAdminUnlocked: false, allLeagues: null, siteAdminView: 'list', siteAdminError: null, showEmailLogin: false, lookupMatches: null };
+const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null, tiebreakGuess: '', tab: 'home', siteAdminUnlocked: false, allLeagues: null, siteAdminView: 'list', siteAdminError: null, showEmailLogin: false, lookupMatches: null, siteAdminLeagueTab: 'results' };
 const params = new URLSearchParams(window.location.search);
 if(params.get('code')) state.code = params.get('code').toUpperCase();
 const lookupEmailParam = params.get('email');
@@ -754,6 +754,7 @@ async function createLeague(){
   render();
 }
 function leaveLeague(){
+  if(state.code) clearStoredIdentity(state.code);
   state.code = null; state.league = null; state.identity = null; state.adminUnlocked = false;
   render();
 }
@@ -844,6 +845,9 @@ function getStoredIdentity(code){
 }
 function setStoredIdentity(code, id){
   try{ localStorage.setItem(storageKeyFor(code), JSON.stringify({id})); } catch(e){}
+}
+function clearStoredIdentity(code){
+  try{ localStorage.removeItem(storageKeyFor(code)); } catch(e){}
 }
 function restoreIdentity(league){
   if(state.identity || !league) return;
@@ -1131,12 +1135,13 @@ async function renderSiteAdminTab(){
     html += renderPhaseStrip(round);
     html += '<p class="note">Public link: <a class="link" href="'+esc(leagueShareLink(state.league.code))+'" target="_blank">'+esc(leagueShareLink(state.league.code))+'</a></p>';
     html += '</div>';
-    html += renderAdmin(state.league, round);
-    if(state.adminUnlocked){
-      html += renderManagePlayers(state.league);
-      html += renderBrandingAdmin(state.league);
-      html += renderDangerZone();
+    if(!state.adminUnlocked){
+      html += renderAdminUnlockCard();
+      return html;
     }
+    html += '<p style="margin:-8px 0 18px;"><a class="link" href="#" onclick="state.adminUnlocked=false;render();return false;">Log out of admin</a></p>';
+    html += renderSiteAdminLeagueSubNav();
+    html += state.siteAdminLeagueTab==='settings' ? renderLeagueSettingsTab(state.league) : renderAdmin(state.league, round);
     return html;
   }
   if(state.allLeagues===null){ state.allLeagues = await loadAllLeagues(); }
@@ -1233,22 +1238,38 @@ function adminMatchRowHTML(a, b, cell, onClickA, onClickB, onScoreA, onScoreB){
     + '</div>'
     + '</div>';
 }
-function renderAdmin(league, round){
-  let html = '<div class="card"><h3>Admin — Enter Results</h3>';
-  if(!state.adminUnlocked){
-    html += '<div class="form-grid"><div class="field full"><label>Admin PIN</label><input type="text" id="adminPinInput" maxlength="4"></div></div>';
-    html += '<button class="btn-secondary" style="margin-top:12px;" onclick="checkAdminPin()">Unlock Admin</button></div>';
-    return html;
-  }
-  html += '<p style="margin:-8px 0 12px;"><a class="link" href="#" onclick="state.adminUnlocked=false;render();return false;">Log out of admin</a></p>';
-
-  html += '<div style="border-top:1px solid var(--pitch-line);margin-bottom:16px;padding-top:14px;">'
+function renderAdminUnlockCard(){
+  return '<div class="card"><h3>Admin</h3>'
+    + '<div class="form-grid"><div class="field full"><label>Admin PIN</label><input type="text" id="adminPinInput" maxlength="4"></div></div>'
+    + '<button class="btn-secondary" style="margin-top:12px;" onclick="checkAdminPin()">Unlock Admin</button></div>';
+}
+function renderSiteAdminLeagueSubNav(){
+  const tabs = [['results','Enter Results'],['settings','League Settings']];
+  let html = '<nav class="main-nav" style="margin:0 0 18px;">';
+  tabs.forEach(([key,label])=>{
+    html += '<button class="'+(state.siteAdminLeagueTab===key?'active':'')+'" onclick="setSiteAdminLeagueTab(\'' + key + '\')">'+label+'</button>';
+  });
+  html += '</nav>';
+  return html;
+}
+function setSiteAdminLeagueTab(tab){
+  state.siteAdminLeagueTab = tab;
+  render();
+}
+function renderLeagueSettingsTab(league){
+  let html = '<div class="card">'
     + '<label style="display:block;font-family:\'Inter Tight\',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--chalk-dim);margin-bottom:6px;">League Name</label>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
     +   '<input type="text" id="renameLeagueInput" value="'+esc(league.name)+'" style="flex:1;min-width:180px;">'
     +   '<button class="btn-secondary" id="renameLeagueBtn" onclick="renameLeague()">Save Name</button>'
     + '</div></div>';
-
+  html += renderManagePlayers(league);
+  html += renderBrandingAdmin(league);
+  html += renderDangerZone();
+  return html;
+}
+function renderAdmin(league, round){
+  let html = '<div class="card"><h3>Enter Results</h3>';
   if(round>14){
     html += '<p class="note" style="margin-top:0;">Tournament complete.</p>';
   } else if(round<=5){
