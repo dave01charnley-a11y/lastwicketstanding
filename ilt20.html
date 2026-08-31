@@ -527,10 +527,17 @@ function renderMyLeagueTab(){
     + '</div></div>';
   html += '<div class="card"><h3>'+esc(league.name)+' \u2014 My Picks</h3>';
   if(!me){
-    html += '<p class="note" style="margin-top:0;">You haven\'t joined this league as a player yet \u2014 join on the Home tab to track your own picks here. Showing the season schedule below either way.</p>';
+    html += '<p class="note" style="margin-top:0;">Join this league with your name to start picking.</p>'
+      + '<div class="form-grid"><div class="field full"><label>Your name</label><input type="text" id="addName" placeholder="e.g. Dave"></div>'
+      + '<div class="field full"><label>Email (optional)</label><input type="email" id="addEmail" placeholder="e.g. you@example.com"></div></div>'
+      + '<button class="btn-primary" style="margin-top:14px;" onclick="addMeAsPlayer()">Join</button>';
   }
+  html += '</div>';
+  if(me){
+    html += renderPickCard(league, me, round);
+  }
+  html += '<div class="card"><h3>'+esc(league.name)+' \u2014 Season Progress</h3>';
 
-  html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--chalk-dim);margin:14px 0 8px;">Season Progress</p>';
   html += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px;">';
   for(let r=1;r<=10;r++){
     const phase = r<round ? 'done' : r===round ? 'current' : 'upcoming';
