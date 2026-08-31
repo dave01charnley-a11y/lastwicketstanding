@@ -177,7 +177,7 @@ function crestHTML(id){
    PIN. Like the per-league PIN, it's only a soft deterrent — it's visible to
    anyone who reads this file's source, not real security. */
 const SITE_ADMIN_PASSWORD = 'lws-admin-2026';
-const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null, tab: 'home', siteAdminUnlocked: false, allLeagues: null, siteAdminView: 'list', siteAdminError: null };
+const state = { code: null, league: null, identity: null, adminUnlocked: false, selectedTeam: null, tab: 'home', siteAdminUnlocked: false, allLeagues: null, siteAdminView: 'list', siteAdminError: null, showEmailLogin: false };
 const params = new URLSearchParams(window.location.search);
 if(params.get('code')) state.code = params.get('code').toUpperCase();
 
@@ -230,11 +230,30 @@ async function copyText(text, btnId){
 }
 
 /* ---------- Game logic ---------- */
+/* Each entered match result is stored as {winner, scoreA, scoreB} going forward.
+   Older leagues (created before scores existed) stored a bare team id instead —
+   these accessors handle both shapes so nothing needs a data migration. */
+function matchWinnerOf(cell){
+  if(cell==null) return null;
+  return (typeof cell === 'object') ? cell.winner : cell;
+}
+function matchScoresOf(cell){
+  if(cell==null || typeof cell !== 'object') return { scoreA:null, scoreB:null };
+  return { scoreA: cell.scoreA!=null ? cell.scoreA : null, scoreB: cell.scoreB!=null ? cell.scoreB : null };
+}
+function withWinner(cell, winner){
+  const prev = (cell && typeof cell==='object') ? cell : {};
+  return { ...prev, winner };
+}
+function withScore(cell, side, value){
+  const prev = (cell && typeof cell==='object') ? cell : (cell!=null ? { winner: cell } : {});
+  return side==='A' ? { ...prev, scoreA: value } : { ...prev, scoreB: value };
+}
 function computeStandings(league){
   const wins = {0:0,1:0,2:0,3:0,4:0,5:0};
   for(let r=1;r<=10;r++){
     const w = league.matchWinners && league.matchWinners[r];
-    if(w) w.forEach(id=>{ if(id!==null) wins[id]++; });
+    if(w) w.forEach(cell=>{ const id=matchWinnerOf(cell); if(id!==null) wins[id]++; });
   }
   return [0,1,2,3,4,5].slice().sort((a,b)=> wins[b]-wins[a] || a-b);
 }
@@ -245,7 +264,7 @@ function computeLeagueTable(league){
     const fx = fixturesForRound(r);
     const w = league.matchWinners && league.matchWinners[r];
     fx.forEach(([a,b], idx)=>{
-      const winner = w ? w[idx] : null;
+      const winner = w ? matchWinnerOf(w[idx]) : null;
       if(winner==null) return;
       stats[a].played++; stats[b].played++;
       if(winner===a){ stats[a].won++; stats[b].lost++; }
@@ -258,23 +277,23 @@ function computeLeagueTable(league){
 }
 function leagueRoundComplete(league, r){
   const w = league.matchWinners && league.matchWinners[r];
-  return !!(w && w.every(x=>x!==null && x!==undefined));
+  return !!(w && w.every(x=>matchWinnerOf(x)!=null));
 }
 function playoffPair(league, r){
   const standings = computeStandings(league);
   if(r===11) return [standings[0], standings[1]];
   if(r===12) return [standings[2], standings[3]];
   if(r===13){
-    const q1w = league.playoffWinners && league.playoffWinners[11];
-    const elw = league.playoffWinners && league.playoffWinners[12];
+    const q1w = league.playoffWinners && matchWinnerOf(league.playoffWinners[11]);
+    const elw = league.playoffWinners && matchWinnerOf(league.playoffWinners[12]);
     if(q1w==null || elw==null) return null;
     const q1Pair = playoffPair(league, 11);
     const q1Loser = q1w===q1Pair[0] ? q1Pair[1] : q1Pair[0];
     return [q1Loser, elw];
   }
   if(r===14){
-    const q1w = league.playoffWinners && league.playoffWinners[11];
-    const q2w = league.playoffWinners && league.playoffWinners[13];
+    const q1w = league.playoffWinners && matchWinnerOf(league.playoffWinners[11]);
+    const q2w = league.playoffWinners && matchWinnerOf(league.playoffWinners[13]);
     if(q1w==null || q2w==null) return null;
     return [q1w, q2w];
   }
@@ -311,9 +330,9 @@ function computePlayerStandings(league){
         if(!w || !leagueRoundComplete(league, r)){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
         const fx = fixturesForRound(r);
         const matchIdx = fx.findIndex(([a,b])=>a===pick||b===pick);
-        outcome = w[matchIdx]===pick;
+        outcome = matchWinnerOf(w[matchIdx])===pick;
       } else {
-        const pw = league.playoffWinners && league.playoffWinners[r];
+        const pw = league.playoffWinners && matchWinnerOf(league.playoffWinners[r]);
         if(pw==null){ history.push({round:r, teamId:pick, result:'Pending'}); continue; }
         outcome = pw===pick;
       }
@@ -330,7 +349,7 @@ function computePlayerStandings(league){
 function currentOpenRound(league){
   for(let r=1;r<=14;r++){
     if(r<=10){ if(!leagueRoundComplete(league, r)) return r; }
-    else { if(league.playoffWinners==null || league.playoffWinners[r]==null) return r; }
+    else { if(league.playoffWinners==null || matchWinnerOf(league.playoffWinners[r])==null) return r; }
   }
   return 15; // tournament fully resolved
 }
@@ -445,7 +464,9 @@ function renderPlayoffBracketCard(league){
   html += '<p class="note" style="margin-top:0;">Top 4 teams from the league table above. Qualifier 1 winner goes straight to the Final; the loser gets a second chance in Qualifier 2.</p>';
   stages.forEach(r=>{
     const pair = playoffPair(league, r);
-    const winner = league.playoffWinners ? league.playoffWinners[r] : null;
+    const cell = league.playoffWinners ? league.playoffWinners[r] : null;
+    const winner = matchWinnerOf(cell);
+    const sc = matchScoresOf(cell);
     html += '<div style="margin:18px 0;">';
     html += '<p style="font-family:\'Inter Tight\',sans-serif;font-size:12px;color:var(--floodlight);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;">'+roundLabel(r)+'</p>';
     if(!pair){
@@ -456,16 +477,16 @@ function renderPlayoffBracketCard(league){
     } else {
       html += '<div class="fixture-row" style="border-bottom:none;">'
         + '<div class="badge-box">'+kitSVG(pair[0])+'</div>'
-        + '<span class="team-name" style="'+(winner===pair[0]?'color:var(--floodlight);':'')+'">'+esc(team(pair[0]).short)+(winner===pair[0]?' \u2713':'')+'</span>'
+        + '<span class="team-name" style="'+(winner===pair[0]?'color:var(--floodlight);':'')+'">'+esc(team(pair[0]).short)+(winner===pair[0]?' \u2713':'')+(sc.scoreA?' <span class="note" style="margin:0;">('+esc(sc.scoreA)+')</span>':'')+'</span>'
         + '<span class="vs">v</span>'
         + '<div class="badge-box">'+kitSVG(pair[1])+'</div>'
-        + '<span class="team-name" style="'+(winner===pair[1]?'color:var(--floodlight);':'')+'">'+esc(team(pair[1]).short)+(winner===pair[1]?' \u2713':'')+'</span>'
+        + '<span class="team-name" style="'+(winner===pair[1]?'color:var(--floodlight);':'')+'">'+esc(team(pair[1]).short)+(winner===pair[1]?' \u2713':'')+(sc.scoreB?' <span class="note" style="margin:0;">('+esc(sc.scoreB)+')</span>':'')+'</span>'
         + '</div>';
       if(winner==null) html += '<p class="note" style="margin:4px 0 0;">Result not yet entered by admin.</p>';
     }
     html += '</div>';
   });
-  const champion = league.playoffWinners ? league.playoffWinners[14] : null;
+  const champion = league.playoffWinners ? matchWinnerOf(league.playoffWinners[14]) : null;
   if(champion!=null){
     html += '<div class="result-strip"><div><div class="result-label">Champion</div><div class="result-points">'+esc(team(champion).name)+'</div></div></div>';
   }
@@ -545,6 +566,7 @@ async function archiveSeason(){
 
 function renderMyLeagueTab(){
   const league = state.league;
+  restoreIdentity(league);
   const standings = computePlayerStandings(league);
   const me = state.identity ? standings.find(s=>s.id===state.identity.id) : null;
   const round = currentOpenRound(league);
@@ -558,10 +580,7 @@ function renderMyLeagueTab(){
     + '</div></div>';
   html += '<div class="card"><h3>'+esc(league.name)+' \u2014 My Picks</h3>';
   if(!me){
-    html += '<p class="note" style="margin-top:0;">Join this league with your name to start picking.</p>'
-      + '<div class="form-grid"><div class="field full"><label>Your name</label><input type="text" id="addName" placeholder="e.g. Dave"></div>'
-      + '<div class="field full"><label>Email (optional)</label><input type="email" id="addEmail" placeholder="e.g. you@example.com"></div></div>'
-      + '<button class="btn-primary" style="margin-top:14px;" onclick="addMeAsPlayer()">Join</button>';
+    html += renderJoinOrLoginForm();
   }
   html += '</div>';
   if(me){
@@ -814,6 +833,7 @@ async function joinLeague(){
 
 function renderLeague(){
   const league = state.league;
+  restoreIdentity(league);
   const standings = computePlayerStandings(league);
   const alive = standings.filter(s=>s.alive);
   const me = state.identity ? standings.find(s=>s.id===state.identity.id) : null;
@@ -848,7 +868,7 @@ function renderLeague(){
   if(me){
     html += '<div class="card"><h3>Make Your Pick</h3><p class="note" style="margin-top:0;">Head to the <a class="link" href="#" onclick="setTab(\'myleague\');return false;">My Picks</a> tab to make this round\'s pick.</p></div>';
   } else if(!state.identity){
-    html += '<div class="card"><h3>Add Yourself</h3><p class="note" style="margin-top:0;">Join this league with your name to start picking.</p><div class="form-grid"><div class="field full"><label>Your name</label><input type="text" id="addName" placeholder="e.g. Dave"></div><div class="field full"><label>Email (optional)</label><input type="email" id="addEmail" placeholder="e.g. you@example.com"></div></div><button class="btn-primary" style="margin-top:14px;" onclick="addMeAsPlayer()">Join</button></div>';
+    html += '<div class="card"><h3>Add Yourself</h3>' + renderJoinOrLoginForm() + '</div>';
   }
 
   // ADMIN
@@ -871,15 +891,70 @@ function renderLeague(){
   return html;
 }
 
+/* ---------- Identity: required email, remembered per device ----------
+   Email is required at join (so results can eventually be emailed, and so a
+   player can recover their picks on another device). The player's id is also
+   cached in localStorage per league code, so returning to the same league on
+   the same device/browser recognises them automatically — no re-entering
+   anything unless localStorage was cleared or it's a different device. */
+function storageKeyFor(code){ return 'lws_identity_'+code; }
+function getStoredIdentity(code){
+  try{ const raw = localStorage.getItem(storageKeyFor(code)); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
+}
+function setStoredIdentity(code, id){
+  try{ localStorage.setItem(storageKeyFor(code), JSON.stringify({id})); } catch(e){}
+}
+function restoreIdentity(league){
+  if(state.identity || !league) return;
+  const stored = getStoredIdentity(league.code);
+  if(stored && (league.players||[]).some(p=>p.id===stored.id)){
+    state.identity = stored;
+  }
+}
+function isValidEmail(email){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+function renderJoinOrLoginForm(){
+  if(state.showEmailLogin){
+    return '<p class="note" style="margin-top:0;">Enter the email you joined with to get back to your picks on this device.</p>'
+      + '<div class="form-grid"><div class="field full"><label>Your email</label><input type="email" id="loginEmail" placeholder="e.g. you@example.com"></div></div>'
+      + '<button class="btn-primary" style="margin-top:14px;" onclick="loginWithEmail()">Find My Picks</button>'
+      + '<p class="note" style="margin-top:10px;"><a class="link" href="#" onclick="state.showEmailLogin=false;render();return false;">New here? Join instead</a></p>';
+  }
+  return '<p class="note" style="margin-top:0;">Join this league with your name and email to start picking.</p>'
+    + '<div class="form-grid"><div class="field full"><label>Your name</label><input type="text" id="addName" placeholder="e.g. Dave"></div>'
+    + '<div class="field full"><label>Email</label><input type="email" id="addEmail" placeholder="e.g. you@example.com"></div></div>'
+    + '<button class="btn-primary" style="margin-top:14px;" onclick="addMeAsPlayer()">Join</button>'
+    + '<p class="note" style="margin-top:10px;"><a class="link" href="#" onclick="state.showEmailLogin=true;render();return false;">Already joined on another device? Log in with your email</a></p>';
+}
+async function loginWithEmail(){
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  if(!email){ alert('Enter your email.'); return; }
+  const league = state.league;
+  const match = (league.players||[]).find(p=>(p.email||'').toLowerCase()===email);
+  if(!match){ alert('No player with that email in this league. Check the email, or join as a new player.'); return; }
+  state.identity = { id: match.id };
+  setStoredIdentity(state.code, match.id);
+  state.showEmailLogin = false;
+  state.tab = 'myleague';
+  render();
+}
 async function addMeAsPlayer(){
   const name = document.getElementById('addName').value.trim();
   const email = document.getElementById('addEmail').value.trim();
   if(!name){ alert('Enter your name.'); return; }
+  if(!email || !isValidEmail(email)){ alert('Enter a valid email address \u2014 it\'s how round confirmations will reach you, and how you can get back to your picks on another device.'); return; }
   const league = state.league;
+  if((league.players||[]).some(p=>(p.email||'').toLowerCase()===email.toLowerCase())){
+    alert('That email is already registered in this league. Use "Log in with your email" instead.');
+    return;
+  }
   const id = 'p_'+Date.now()+'_'+Math.floor(Math.random()*10000);
   league.players.push({ id, name, email });
   await saveLeague(league);
   state.identity = { id };
+  setStoredIdentity(state.code, id);
   state.league = await loadLeague(state.code);
   state.tab = 'myleague';
   render();
@@ -948,16 +1023,22 @@ async function lockPick(){
   render();
 }
 
-function adminMatchRowHTML(a, b, curWinner, onClickA, onClickB){
+function adminMatchRowHTML(a, b, cell, onClickA, onClickB, onScoreA, onScoreB){
+  const curWinner = matchWinnerOf(cell);
+  const sc = matchScoresOf(cell);
   return '<div class="admin-match-row">'
     + '<div class="teams-line">'
     +   '<div class="team-side"><div class="badge-box">'+kitSVG(a)+'</div><span class="team-name">'+esc(team(a).short)+'</span></div>'
     +   '<span class="vs">v</span>'
     +   '<div class="team-side right"><span class="team-name">'+esc(team(b).short)+'</span><div class="badge-box">'+kitSVG(b)+'</div></div>'
     + '</div>'
-    + '<div class="buttons-line">'
+    + '<div class="buttons-line" style="margin-bottom:10px;">'
     +   '<button class="win-btn'+(curWinner===a?' active':'')+'" onclick="'+onClickA+'">'+esc(team(a).short)+' won</button>'
     +   '<button class="win-btn'+(curWinner===b?' active':'')+'" onclick="'+onClickB+'">'+esc(team(b).short)+' won</button>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    +   '<div class="field"><label>'+esc(team(a).short)+' score</label><input type="text" value="'+esc(sc.scoreA||'')+'" placeholder="e.g. 187/6" onchange="'+onScoreA+'"></div>'
+    +   '<div class="field"><label>'+esc(team(b).short)+' score</label><input type="text" value="'+esc(sc.scoreB||'')+'" placeholder="e.g. 165" onchange="'+onScoreB+'"></div>'
     + '</div>'
     + '</div>';
 }
@@ -985,13 +1066,17 @@ function renderAdmin(league, round){
   if(round<=10){
     const fx = fixturesForRound(round);
     if(!league.matchWinners[round]) league.matchWinners[round] = [null,null,null];
-    html += '<p class="note" style="margin-top:0;">Enter the winner of each match in '+roundLabel(round)+'.</p>';
+    html += '<p class="note" style="margin-top:0;">Enter the winner (and score, once you have it) of each match in '+roundLabel(round)+'.</p>';
     fx.forEach(([a,b],i)=>{
       const cur = league.matchWinners[round][i];
-      html += adminMatchRowHTML(a, b, cur, "setLeagueWinner("+round+","+i+","+a+")", "setLeagueWinner("+round+","+i+","+b+")");
+      html += adminMatchRowHTML(a, b, cur,
+        "setLeagueWinner("+round+","+i+","+a+")", "setLeagueWinner("+round+","+i+","+b+")",
+        "setLeagueScore("+round+","+i+",'A',this.value)", "setLeagueScore("+round+","+i+",'B',this.value)");
     });
-    const allSet = league.matchWinners[round].every(x=>x!=null);
-    html += '<button class="btn-primary" style="margin-top:16px;" '+(allSet?'':'disabled')+' onclick="settleAdmin()">Settle '+roundLabel(round)+'</button>';
+    const allSet = league.matchWinners[round].every(x=>matchWinnerOf(x)!=null);
+    html += allSet
+      ? '<p class="note" style="margin-top:16px;color:var(--floodlight);">\u2713 All results in \u2014 '+(round<10?('Round '+(round+1)):'the Playoffs')+' '+(round<10?'is':'are')+' now open. No further action needed.</p>'
+      : '<p class="note" style="margin-top:16px;">Enter all three winners to open the next round automatically \u2014 there\'s no separate step to advance it.</p>';
   } else {
     const pair = playoffPair(league, round);
     if(!pair){
@@ -999,9 +1084,13 @@ function renderAdmin(league, round){
       return html;
     }
     const cur = league.playoffWinners[round];
-    html += '<p class="note" style="margin-top:0;">Enter the winner of '+roundLabel(round)+': '+team(pair[0]).name+' v '+team(pair[1]).name+'.</p>';
-    html += adminMatchRowHTML(pair[0], pair[1], cur, "setPlayoffWinner("+round+","+pair[0]+")", "setPlayoffWinner("+round+","+pair[1]+")");
-    html += '<button class="btn-primary" style="margin-top:16px;" '+(cur!=null?'':'disabled')+' onclick="settleAdmin()">Settle '+roundLabel(round)+'</button>';
+    html += '<p class="note" style="margin-top:0;">Enter the winner (and score, once you have it) of '+roundLabel(round)+': '+team(pair[0]).name+' v '+team(pair[1]).name+'.</p>';
+    html += adminMatchRowHTML(pair[0], pair[1], cur,
+      "setPlayoffWinner("+round+","+pair[0]+")", "setPlayoffWinner("+round+","+pair[1]+")",
+      "setPlayoffScore("+round+",'A',this.value)", "setPlayoffScore("+round+",'B',this.value)");
+    html += matchWinnerOf(cur)!=null
+      ? '<p class="note" style="margin-top:16px;color:var(--floodlight);">\u2713 Result in \u2014 the next stage is now open. No further action needed.</p>'
+      : '<p class="note" style="margin-top:16px;">Enter the winner to open the next stage automatically.</p>';
   }
 
   html += renderManagePlayers(league);
@@ -1057,7 +1146,15 @@ function checkAdminPin(){
 async function setLeagueWinner(round, matchIdx, teamId){
   const league = state.league;
   if(!league.matchWinners[round]) league.matchWinners[round] = [null,null,null];
-  league.matchWinners[round][matchIdx] = teamId;
+  league.matchWinners[round][matchIdx] = withWinner(league.matchWinners[round][matchIdx], teamId);
+  await saveLeague(league);
+  state.league = await loadLeague(state.code);
+  render();
+}
+async function setLeagueScore(round, matchIdx, side, value){
+  const league = state.league;
+  if(!league.matchWinners[round]) league.matchWinners[round] = [null,null,null];
+  league.matchWinners[round][matchIdx] = withScore(league.matchWinners[round][matchIdx], side, value);
   await saveLeague(league);
   state.league = await loadLeague(state.code);
   render();
@@ -1065,12 +1162,16 @@ async function setLeagueWinner(round, matchIdx, teamId){
 async function setPlayoffWinner(round, teamId){
   const league = state.league;
   if(!league.playoffWinners) league.playoffWinners = {};
-  league.playoffWinners[round] = teamId;
+  league.playoffWinners[round] = withWinner(league.playoffWinners[round], teamId);
   await saveLeague(league);
   state.league = await loadLeague(state.code);
   render();
 }
-async function settleAdmin(){
+async function setPlayoffScore(round, side, value){
+  const league = state.league;
+  if(!league.playoffWinners) league.playoffWinners = {};
+  league.playoffWinners[round] = withScore(league.playoffWinners[round], side, value);
+  await saveLeague(league);
   state.league = await loadLeague(state.code);
   render();
 }
